@@ -52,6 +52,29 @@ func main() {
 		warehouse.packages[pos] = pack
 	}
 
+	for {
+		words := strings.Split(scanner.Text(), " ")
+
+		if len(words) != 3 {
+			break
+		}
+
+		if !scanner.Scan() {
+			break
+		}
+	}
+
+	for {
+		words := strings.Split(scanner.Text(), " ")
+
+		if len(words) != 5 {
+			log.Fatal("Invalid formatting for truck and loading place.")
+		}
+		if !scanner.Scan() {
+			break
+		}
+	}
+
 	fmt.Println(warehouse, cycles)
 	return
 }
