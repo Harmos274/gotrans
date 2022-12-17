@@ -22,7 +22,6 @@ func main() {
 	}(file)
 
 	scanner := bufio.NewScanner(file)
-
 	var warehouse Warehouse
 	var cycles int
 
@@ -32,7 +31,7 @@ func main() {
 			log.Fatal(err)
 		}
 	} else {
-		log.Fatal(scanner.Err())
+		log.Fatal("Invalid file format.")
 	}
 
 	for scanner.Scan() {
@@ -46,7 +45,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		if warehouse.packages.Exists(pos) {
+		if warehouse.packages.Exists(pos) || warehouse.palletJacks.Exists(pos) || warehouse.trucks.Exists(pos) {
 			log.Fatal("Two entities can't be at the same position.")
 		}
 		warehouse.packages[pos] = pack
@@ -58,7 +57,14 @@ func main() {
 		if len(words) != 3 {
 			break
 		}
-
+		pj, pos, err := parsePalletJacks(words)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if warehouse.packages.Exists(pos) || warehouse.palletJacks.Exists(pos) || warehouse.trucks.Exists(pos) {
+			log.Fatal("Two entities can't be at the same position.")
+		}
+		warehouse.palletJacks[pos] = pj
 		if !scanner.Scan() {
 			break
 		}
@@ -70,6 +76,14 @@ func main() {
 		if len(words) != 5 {
 			log.Fatal("Invalid formatting for truck and loading place.")
 		}
+		truck, pos, err := parseTrucks(words)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if warehouse.packages.Exists(pos) || warehouse.palletJacks.Exists(pos) || warehouse.trucks.Exists(pos) {
+			log.Fatal("Two entities can't be at the same position.")
+		}
+		warehouse.trucks[pos] = truck
 		if !scanner.Scan() {
 			break
 		}
@@ -118,6 +132,37 @@ func parsePackages(words []string) (pack Package, position Position, err error) 
 	return
 }
 
+func parsePalletJacks(words []string) (pj PalletJack, position Position, err error) {
+	pj.name = words[0]
+	x, err1 := strconv.Atoi(words[1])
+	y, err2 := strconv.Atoi(words[2])
+
+	if err1 != nil || err2 != nil {
+		err = errors.New("invalid pallet jack formatting")
+		return
+	}
+	position.x = x
+	position.y = y
+	return
+}
+
+func parseTrucks(words []string) (truck Truck, position Position, err error) {
+	truck.name = words[0]
+	x, err1 := strconv.Atoi(words[1])
+	y, err2 := strconv.Atoi(words[2])
+	maxWeight, err3 := strconv.Atoi(words[3])
+	elapseDischargingTime, err4 := strconv.Atoi(words[4])
+	if err1 != nil || err2 != nil || err3 != nil || err4 != nil {
+		err = errors.New("invalid truck formatting")
+		return
+	}
+	truck.elapseDischargingTime = elapseDischargingTime
+	truck.maxWeight = Weight(maxWeight)
+	position.x = x
+	position.y = y
+	return
+}
+
 type Position struct {
 	x, y int
 }
@@ -134,6 +179,7 @@ type Package struct {
 }
 
 type Truck struct {
+	name                  string
 	maxWeight             Weight
 	elapseDischargingTime int
 }
