@@ -21,17 +21,27 @@ func main() {
 		_ = file.Close()
 	}(file)
 
+	warehouse, cycles, err := parseInputFile(file)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(warehouse, cycles)
+	return
+}
+
+func parseInputFile(file *os.File) (warehouse Warehouse, cycles int, err error) {
 	scanner := bufio.NewScanner(file)
-	var warehouse Warehouse
-	var cycles int
 
 	if scanner.Scan() {
 		warehouse, cycles, err = parseWarehouse(scanner.Text())
 		if err != nil {
-			log.Fatal(err)
+			return
 		}
 	} else {
-		log.Fatal("Invalid file format.")
+		err = errors.New("invalid file format")
+		return
 	}
 
 	for scanner.Scan() {
@@ -40,13 +50,15 @@ func main() {
 		if len(words) != 4 {
 			break
 		}
-		pack, pos, err := parsePackages(words)
+		pack, pos, packErr := parsePackages(words)
 
-		if err != nil {
-			log.Fatal(err)
+		if packErr != nil {
+			err = packErr
+			return
 		}
 		if warehouse.packages.Exists(pos) || warehouse.palletJacks.Exists(pos) || warehouse.trucks.Exists(pos) {
-			log.Fatal("Two entities can't be at the same position.")
+			err = errors.New("two entities can't be at the same position")
+			return
 		}
 		warehouse.packages[pos] = pack
 	}
@@ -57,12 +69,14 @@ func main() {
 		if len(words) != 3 {
 			break
 		}
-		pj, pos, err := parsePalletJacks(words)
-		if err != nil {
-			log.Fatal(err)
+		pj, pos, pjErr := parsePalletJacks(words)
+		if pjErr != nil {
+			err = pjErr
+			return
 		}
 		if warehouse.packages.Exists(pos) || warehouse.palletJacks.Exists(pos) || warehouse.trucks.Exists(pos) {
-			log.Fatal("Two entities can't be at the same position.")
+			err = errors.New("two entities can't be at the same position")
+			return
 		}
 		warehouse.palletJacks[pos] = pj
 		if !scanner.Scan() {
@@ -74,22 +88,23 @@ func main() {
 		words := strings.Split(scanner.Text(), " ")
 
 		if len(words) != 5 {
-			log.Fatal("Invalid formatting for truck and loading place.")
+			err = errors.New("invalid formatting for truck and loading place")
+			return
 		}
-		truck, pos, err := parseTrucks(words)
-		if err != nil {
-			log.Fatal(err)
+		truck, pos, truckErr := parseTrucks(words)
+		if truckErr != nil {
+			err = truckErr
+			return
 		}
 		if warehouse.packages.Exists(pos) || warehouse.palletJacks.Exists(pos) || warehouse.trucks.Exists(pos) {
-			log.Fatal("Two entities can't be at the same position.")
+			err = errors.New("two entities can't be at the same position")
+			return
 		}
 		warehouse.trucks[pos] = truck
 		if !scanner.Scan() {
 			break
 		}
 	}
-
-	fmt.Println(warehouse, cycles)
 	return
 }
 
@@ -166,16 +181,24 @@ func parseTrucks(words []string) (truck Truck, position Position, err error) {
 type Position struct {
 	x, y int
 }
-type Weight int
 
-type PalletJack struct {
-	name string
-	pack *Package
+type Warehouse struct {
+	length, height int
+	packages       EntityMap[Package]
+	palletJacks    EntityMap[PalletJack]
+	trucks         EntityMap[Truck]
 }
+
+type Weight int
 
 type Package struct {
 	weight Weight
 	name   string
+}
+
+type PalletJack struct {
+	name string
+	pack *Package
 }
 
 type Truck struct {
@@ -189,11 +212,4 @@ type EntityMap[T Package | Truck | PalletJack] map[Position]T
 func (ettMap EntityMap[T]) Exists(pos Position) bool {
 	_, exists := ettMap[pos]
 	return exists
-}
-
-type Warehouse struct {
-	length, height int
-	packages       EntityMap[Package]
-	palletJacks    EntityMap[PalletJack]
-	trucks         EntityMap[Truck]
 }
