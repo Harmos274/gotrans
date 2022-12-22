@@ -58,7 +58,7 @@ func parseInputFile(file *os.File) (warehouse Warehouse, cycles int, err error) 
 		}
 		warehouse.palletJacks[pos] = pj
 		if !scanner.Scan() {
-			break
+			return
 		}
 	}
 
@@ -80,10 +80,9 @@ func parseInputFile(file *os.File) (warehouse Warehouse, cycles int, err error) 
 		}
 		warehouse.trucks[pos] = truck
 		if !scanner.Scan() {
-			break
+			return
 		}
 	}
-	return
 }
 
 func parseWarehouse(line string) (warehouse Warehouse, cycles int, err error) {
