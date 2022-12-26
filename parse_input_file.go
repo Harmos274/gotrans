@@ -4,12 +4,13 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	. "github.com/Harmos274/gotrans/clean_warehouse"
 	"os"
 	"strconv"
 	"strings"
 )
 
-func parseInputFile(file *os.File) (warehouse Warehouse, cycles int, err error) {
+func parseInputFile(file *os.File) (warehouse Warehouse, cycles uint, err error) {
 	scanner := bufio.NewScanner(file)
 
 	if scanner.Scan() {
@@ -34,11 +35,11 @@ func parseInputFile(file *os.File) (warehouse Warehouse, cycles int, err error) 
 			err = packErr
 			return
 		}
-		if warehouse.somethingExistsAtThisPosition(pos) {
+		if warehouse.SomethingExistsAtThisPosition(pos) {
 			err = errors.New("two entities can't be at the same position")
 			return
 		}
-		warehouse.packages[pos] = pack
+		warehouse.Packages[pos] = pack
 	}
 
 	for {
@@ -52,11 +53,11 @@ func parseInputFile(file *os.File) (warehouse Warehouse, cycles int, err error) 
 			err = pjErr
 			return
 		}
-		if warehouse.somethingExistsAtThisPosition(pos) {
+		if warehouse.SomethingExistsAtThisPosition(pos) {
 			err = errors.New("two entities can't be at the same position")
 			return
 		}
-		warehouse.palletJacks[pos] = pj
+		warehouse.PalletJacks[pos] = pj
 		if !scanner.Scan() {
 			return
 		}
@@ -74,21 +75,21 @@ func parseInputFile(file *os.File) (warehouse Warehouse, cycles int, err error) 
 			err = truckErr
 			return
 		}
-		if warehouse.somethingExistsAtThisPosition(pos) {
+		if warehouse.SomethingExistsAtThisPosition(pos) {
 			err = errors.New("two entities can't be at the same position")
 			return
 		}
-		warehouse.trucks[pos] = truck
+		warehouse.Trucks[pos] = truck
 		if !scanner.Scan() {
 			return
 		}
 	}
 }
 
-func parseWarehouse(line string) (warehouse Warehouse, cycles int, err error) {
+func parseWarehouse(line string) (warehouse Warehouse, cycles uint, err error) {
 	const minimumCycles = 10
 	const maximumCycles = 100_000
-	_, err = fmt.Sscanf(line, "%d %d %d", &warehouse.length, &warehouse.height, &cycles)
+	_, err = fmt.Sscanf(line, "%d %d %d", &warehouse.Length, &warehouse.Height, &cycles)
 
 	if err != nil {
 		return
@@ -97,9 +98,9 @@ func parseWarehouse(line string) (warehouse Warehouse, cycles int, err error) {
 		err = errors.New("cycle should be between 10 and 100 000")
 		return
 	}
-	warehouse.packages = make(EntityMap[Package])
-	warehouse.palletJacks = make(EntityMap[PalletJack])
-	warehouse.trucks = make(EntityMap[Truck])
+	warehouse.Packages = make(EntityMap[Package])
+	warehouse.PalletJacks = make(EntityMap[PalletJack])
+	warehouse.Trucks = make(EntityMap[Truck])
 	return
 }
 
@@ -109,7 +110,7 @@ func parsePackages(words []string) (pack Package, position Position, err error) 
 		"green":  200,
 		"blue":   500,
 	}
-	pack.name = words[0]
+	pack.Name = words[0]
 	x, err1 := strconv.Atoi(words[1])
 	y, err2 := strconv.Atoi(words[2])
 	weight, ok := colorToWeight[strings.ToLower(words[3])]
@@ -118,14 +119,14 @@ func parsePackages(words []string) (pack Package, position Position, err error) 
 		err = errors.New("invalid package formatting")
 		return
 	}
-	position.x = x
-	position.y = y
-	pack.weight = weight
+	position.X = x
+	position.Y = y
+	pack.Weight = weight
 	return
 }
 
 func parsePalletJacks(words []string) (pj PalletJack, position Position, err error) {
-	pj.name = words[0]
+	pj.Name = words[0]
 	x, err1 := strconv.Atoi(words[1])
 	y, err2 := strconv.Atoi(words[2])
 
@@ -133,13 +134,13 @@ func parsePalletJacks(words []string) (pj PalletJack, position Position, err err
 		err = errors.New("invalid pallet jack formatting")
 		return
 	}
-	position.x = x
-	position.y = y
+	position.X = x
+	position.Y = y
 	return
 }
 
 func parseTrucks(words []string) (truck Truck, position Position, err error) {
-	truck.name = words[0]
+	truck.Name = words[0]
 	x, err1 := strconv.Atoi(words[1])
 	y, err2 := strconv.Atoi(words[2])
 	maxWeight, err3 := strconv.Atoi(words[3])
@@ -148,9 +149,9 @@ func parseTrucks(words []string) (truck Truck, position Position, err error) {
 		err = errors.New("invalid truck formatting")
 		return
 	}
-	truck.elapseDischargingTime = elapseDischargingTime
-	truck.maxWeight = Weight(maxWeight)
-	position.x = x
-	position.y = y
+	truck.ElapseDischargingTime = elapseDischargingTime
+	truck.MaxWeight = Weight(maxWeight)
+	position.X = x
+	position.Y = y
 	return
 }
