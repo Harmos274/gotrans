@@ -2,9 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/Harmos274/gotrans/clean_warehouse"
+	"github.com/Harmos274/gotrans/warehouse"
 )
 
-func ShowWarehouse(warehouse clean_warehouse.Warehouse) string {
-	return fmt.Sprintf("%X\n", warehouse)
+type ShowableWarehouse warehouse.Warehouse
+
+func (sw ShowableWarehouse) String() string {
+	// Faut changer ça c'est pour la compilation !!!!!!
+	return fmt.Sprintf("%X\n", (warehouse.Warehouse)(sw))
 }

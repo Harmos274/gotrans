@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	. "github.com/Harmos274/gotrans/clean_warehouse"
+	. "github.com/Harmos274/gotrans/warehouse"
 	"os"
 	"strconv"
 	"strings"
@@ -29,7 +29,7 @@ func parseInputFile(file *os.File) (warehouse Warehouse, cycles uint, err error)
 		if len(words) != 4 {
 			break
 		}
-		pack, pos, packErr := parsePackages(words)
+		pack, pos, packErr := parsePackage(words)
 
 		if packErr != nil {
 			err = packErr
@@ -48,7 +48,7 @@ func parseInputFile(file *os.File) (warehouse Warehouse, cycles uint, err error)
 		if len(words) != 3 {
 			break
 		}
-		pj, pos, pjErr := parsePalletJacks(words)
+		pj, pos, pjErr := parsePalletJack(words)
 		if pjErr != nil {
 			err = pjErr
 			return
@@ -70,7 +70,7 @@ func parseInputFile(file *os.File) (warehouse Warehouse, cycles uint, err error)
 			err = errors.New("invalid formatting for truck and loading place")
 			return
 		}
-		truck, pos, truckErr := parseTrucks(words)
+		truck, pos, truckErr := parseTruck(words)
 		if truckErr != nil {
 			err = truckErr
 			return
@@ -104,7 +104,7 @@ func parseWarehouse(line string) (warehouse Warehouse, cycles uint, err error) {
 	return
 }
 
-func parsePackages(words []string) (pack Package, position Position, err error) {
+func parsePackage(words []string) (pack Package, position Position, err error) {
 	colorToWeight := map[string]Weight{
 		"yellow": 100,
 		"green":  200,
@@ -125,7 +125,7 @@ func parsePackages(words []string) (pack Package, position Position, err error) 
 	return
 }
 
-func parsePalletJacks(words []string) (pj PalletJack, position Position, err error) {
+func parsePalletJack(words []string) (pj PalletJack, position Position, err error) {
 	pj.Name = words[0]
 	x, err1 := strconv.Atoi(words[1])
 	y, err2 := strconv.Atoi(words[2])
@@ -139,7 +139,7 @@ func parsePalletJacks(words []string) (pj PalletJack, position Position, err err
 	return
 }
 
-func parseTrucks(words []string) (truck Truck, position Position, err error) {
+func parseTruck(words []string) (truck Truck, position Position, err error) {
 	truck.Name = words[0]
 	x, err1 := strconv.Atoi(words[1])
 	y, err2 := strconv.Atoi(words[2])

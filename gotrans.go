@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/Harmos274/gotrans/clean_warehouse"
+	"github.com/Harmos274/gotrans/warehouse"
 	"log"
 	"os"
 )
@@ -18,19 +18,18 @@ func main() {
 		_ = file.Close()
 	}(file)
 
-	warehouse, cycles, err := parseInputFile(file)
+	initWr, cycles, err := parseInputFile(file)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println(warehouse, cycles)
-	ch := make(chan clean_warehouse.Warehouse)
+	ch := make(chan warehouse.Warehouse)
 
-	go clean_warehouse.CleanWarehouse(warehouse, ch, cycles)
+	go warehouse.CleanWarehouse(initWr, ch, cycles)
 
 	for wr := range ch {
-		fmt.Print(ShowWarehouse(wr))
+		fmt.Print(ShowableWarehouse(wr))
 	}
 	return
 }

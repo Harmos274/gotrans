@@ -1,4 +1,4 @@
-package clean_warehouse
+package warehouse
 
 type Warehouse struct {
 	Length, Height uint
