@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/Harmos274/gotrans/warehouse"
 	"log"
 	"os"
+
+	"github.com/Harmos274/gotrans/warehouse"
 )
 
 func main() {
@@ -28,8 +29,11 @@ func main() {
 
 	go warehouse.CleanWarehouse(initWr, ch, cycles)
 
+	actualCycle := 1
 	for wr := range ch {
-		fmt.Print(ShowableWarehouse(wr))
+		fmt.Println("tour", actualCycle)
+		fmt.Println(ShowableWarehouse(wr))
+		actualCycle += 1
 	}
 	return
 }

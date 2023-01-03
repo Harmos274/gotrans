@@ -24,13 +24,16 @@ type Package struct {
 type Weight int
 
 type PalletJack struct {
-	Name string
-	pack *Package
+	Name  string
+	State string
+	pack  *Package
 }
 
 type Truck struct {
 	Name                  string
+	State                 string
 	MaxWeight             Weight
+	CurrentWeight         Weight
 	ElapseDischargingTime int
 }
 
