@@ -4,10 +4,11 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	. "github.com/Harmos274/gotrans/warehouse"
 	"os"
 	"strconv"
 	"strings"
+
+	. "github.com/Harmos274/gotrans/warehouse"
 )
 
 func parseInputFile(file *os.File) (warehouse Warehouse, cycles uint, err error) {
@@ -136,6 +137,7 @@ func parsePalletJack(words []string) (pj PalletJack, position Position, err erro
 	}
 	position.X = x
 	position.Y = y
+	pj.State = "WAIT"
 	return
 }
 
@@ -151,7 +153,9 @@ func parseTruck(words []string) (truck Truck, position Position, err error) {
 	}
 	truck.ElapseDischargingTime = elapseDischargingTime
 	truck.MaxWeight = Weight(maxWeight)
+	truck.CurrentWeight = Weight(0)
 	position.X = x
 	position.Y = y
+	truck.State = "WAITING"
 	return
 }
