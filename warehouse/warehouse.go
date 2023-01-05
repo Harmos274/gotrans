@@ -11,6 +11,18 @@ func (wh Warehouse) SomethingExistsAtThisPosition(pos Position) bool {
 	return wh.Packages.Exists(pos) || wh.PalletJacks.Exists(pos) || wh.Trucks.Exists(pos)
 }
 
+func (wh Warehouse) Clone() Warehouse {
+	var cloned Warehouse
+
+	cloned.Height = wh.Height
+	cloned.Length = wh.Length
+	cloned.Packages = copyMap(wh.Packages)
+	cloned.PalletJacks = copyMap(wh.PalletJacks)
+	cloned.Trucks = copyMap(wh.Trucks)
+
+	return cloned
+}
+
 type EntityMap[T Package | PalletJack | Truck] map[Position]T
 
 type Position struct {
@@ -50,4 +62,12 @@ func CleanWarehouse(initialWarehouse Warehouse, ch chan Warehouse, cycles uint) 
 		// Pathfinding Algorithm
 		ch <- currentWarehouse
 	}
+}
+
+func copyMap[T Package | PalletJack | Truck](toClone map[Position]T) map[Position]T {
+	ret := make(map[Position]T)
+	for key, value := range toClone {
+		ret[key] = value
+	}
+	return ret
 }
