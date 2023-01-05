@@ -36,7 +36,7 @@ func parseInputFile(file *os.File) (warehouse Warehouse, cycles uint, err error)
 			err = packErr
 			return
 		}
-		if warehouse.SomethingExistsAtThisPosition(pos) {
+		if warehouse.SomethingExistsAt(pos) {
 			err = errors.New("two entities can't be at the same position")
 			return
 		}
@@ -54,7 +54,7 @@ func parseInputFile(file *os.File) (warehouse Warehouse, cycles uint, err error)
 			err = pjErr
 			return
 		}
-		if warehouse.SomethingExistsAtThisPosition(pos) {
+		if warehouse.SomethingExistsAt(pos) {
 			err = errors.New("two entities can't be at the same position")
 			return
 		}
@@ -76,7 +76,7 @@ func parseInputFile(file *os.File) (warehouse Warehouse, cycles uint, err error)
 			err = truckErr
 			return
 		}
-		if warehouse.SomethingExistsAtThisPosition(pos) {
+		if warehouse.SomethingExistsAt(pos) {
 			err = errors.New("two entities can't be at the same position")
 			return
 		}

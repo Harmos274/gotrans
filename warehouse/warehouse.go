@@ -1,13 +1,13 @@
 package warehouse
 
 type Warehouse struct {
-	Length, Height uint
+	Length, Height int
 	Packages       EntityMap[Package]
 	PalletJacks    EntityMap[PalletJack]
 	Trucks         EntityMap[Truck]
 }
 
-func (wh Warehouse) SomethingExistsAtThisPosition(pos Position) bool {
+func (wh Warehouse) SomethingExistsAt(pos Position) bool {
 	return wh.Packages.Exists(pos) || wh.PalletJacks.Exists(pos) || wh.Trucks.Exists(pos)
 }
 

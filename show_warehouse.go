@@ -10,10 +10,10 @@ import (
 type ShowableWarehouse warehouse.Warehouse
 
 func (sw ShowableWarehouse) WarehouseMap() string {
-	w := strings.Repeat("#", int(sw.Length)*2+2)
-	for y := 0; y < int(sw.Height); y++ {
+	w := strings.Repeat("#", sw.Length*2+2)
+	for y := 0; y < sw.Height; y++ {
 		w += "#\n# "
-		for x := 0; x < int(sw.Length); x++ {
+		for x := 0; x < sw.Length; x++ {
 			pos := warehouse.Position{X: x, Y: y}
 			if sw.Packages.Exists(pos) {
 				w += "P "
@@ -26,7 +26,7 @@ func (sw ShowableWarehouse) WarehouseMap() string {
 			}
 		}
 	}
-	w += "#\n" + strings.Repeat("#", int(sw.Length)*2+3) + "\n"
+	w += "#\n" + strings.Repeat("#", sw.Length*2+3) + "\n"
 	return w
 }
 
