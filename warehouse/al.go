@@ -11,7 +11,7 @@ const (
 )
 
 func refreshPaths(wh Warehouse, current_paths []Path) []Path {
-	targeted_packages, targeted_trucks := countPathsDestinations(wh, current_paths)
+	targeted_packages := countTargetedPackages(wh, current_paths)
 	idle := getIdleForklifts(wh.PalletJacks, current_paths, true)
 
 	for pos := range idle {
@@ -24,7 +24,9 @@ func refreshPaths(wh Warehouse, current_paths []Path) []Path {
 
 	idle = getIdleForklifts(wh.PalletJacks, current_paths, false)
 
-	for len(idle) > 0 && targeted_packages < len(wh.Packages) && targeted_trucks < len(wh.Trucks) {
+	fmt.Println("Idle empty forklifts", idle)
+	fmt.Println(len(idle), "> 0 &&", targeted_packages, "<", len(wh.Packages))
+	for len(idle) > 0 && targeted_packages < len(wh.Packages) {
 		pos := idle.randomElem()
 
 		path := pathToObject(wh, pos, current_paths, shouldGoToPackage)
@@ -60,9 +62,13 @@ func pathToObject(wh Warehouse, start Position, other_paths []Path, validator va
 			move(wh, current_step.Position, next_move, &current_path, pos_set, &best_path,
 				other_paths, validator)
 		} else {
+			//fmt.Println("Walking back from", current_step.Position.X, current_step.Position.Y, "best path is", best_path)
 			current_path = current_path[:len(current_path)-1]
+			delete(pos_set, current_step.Position)
 		}
 	}
+
+	fmt.Println("Computed best path for", start, best_path)
 
 	return best_path
 }
@@ -79,7 +85,9 @@ func move(wh Warehouse, current_pos Position, direction int, path *[]AttemptPosi
 	if wh.SomethingExistsAt(new_pos) {
 		if validator(wh, *path, new_pos, other_paths) {
 			*current_best = attemptToPath(*path, new_pos)
+			//fmt.Println("Found best", *current_best)
 		} else {
+			//fmt.Println("Collided with invalid object at", new_pos)
 			return
 		}
 	} else {
@@ -88,6 +96,7 @@ func move(wh Warehouse, current_pos Position, direction int, path *[]AttemptPosi
 			Position:   new_pos,
 		})
 		pos_set[new_pos] = struct{}{}
+		//fmt.Println("Moved to", new_pos)
 	}
 }
 
@@ -196,10 +205,6 @@ func alreadyVisited(set positionSet, pos Position) bool {
 }
 
 func isSomeoneOnThisTile(pos Position, paths []Path, turn int) bool {
-	target := Position{3, 0}
-	if pos == target {
-		fmt.Println(paths, turn)
-	}
 	for _, path := range paths {
 		if len(path.steps) > turn && path.steps[turn] == pos {
 			return true
@@ -244,18 +249,16 @@ func insertPath(path Path, paths []Path) ([]Path, bool) {
 	return append(paths, path), false
 }
 
-func countPathsDestinations(wh Warehouse, paths []Path) (int, int) {
-	packages, trucks := 0, 0
+func countTargetedPackages(wh Warehouse, paths []Path) int {
+	packages := 0
 
 	for _, path := range paths {
 		if wh.Packages.Exists(path.destination) {
 			packages += 1
-		} else if wh.Trucks.Exists(path.destination) {
-			trucks += 1
 		}
 	}
 
-	return packages, trucks
+	return packages
 }
 
 func getIdleForklifts(forklifs EntityMap[PalletJack], paths []Path, loaded bool) positionSet {

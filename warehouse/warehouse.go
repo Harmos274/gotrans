@@ -1,5 +1,10 @@
 package warehouse
 
+import (
+	"fmt"
+	"time"
+)
+
 type Warehouse struct {
 	Length, Height int
 	Packages       EntityMap[Package]
@@ -57,11 +62,72 @@ func (ettMap EntityMap[T]) Exists(pos Position) bool {
 func CleanWarehouse(initialWarehouse Warehouse, ch chan Warehouse, cycles uint) {
 	defer close(ch)
 	currentWarehouse := initialWarehouse
+	paths := refreshPaths(currentWarehouse, make([]Path, 0))
 
+	fmt.Println("Initial paths", paths)
 	for ; cycles != 0; cycles -= 1 {
-		// Pathfinding Algorithm
-		ch <- currentWarehouse
+		paths = applyPaths(initialWarehouse, paths)
+		fmt.Println("Paths after application", paths)
+
+		ch <- currentWarehouse.Clone()
+		time.Sleep(100 * time.Millisecond)
+
+		paths = refreshPaths(currentWarehouse, paths)
+		fmt.Println("Paths after refresh", paths)
 	}
+}
+
+func applyPaths(wh Warehouse, paths []Path) []Path {
+	for index := 0; index < len(paths); {
+		path := paths[index]
+
+		fmt.Println("Tring to apply", path)
+
+		if path.isValid() {
+			forklift := wh.PalletJacks[path.current]
+
+			if len(path.steps) == 0 {
+				if wh.Trucks.Exists(path.destination) {
+					truck := wh.Trucks[path.destination]
+
+					if truck.CurrentWeight+forklift.pack.Weight <= truck.MaxWeight {
+						truck.CurrentWeight += forklift.pack.Weight
+						forklift.pack = nil
+
+						wh.PalletJacks[path.current] = forklift
+						wh.Trucks[path.destination] = truck
+						paths[index] = paths[len(paths)-1]
+						paths = paths[:len(paths)-1]
+						fmt.Println(path.current, "dropped package to", path.destination)
+					}
+				} else if wh.Packages.Exists(path.destination) {
+					// Take package from map
+					pack := wh.Packages[path.destination]
+					delete(wh.Packages, path.destination)
+
+					// Give package to forklift
+					forklift.pack = &pack
+					wh.PalletJacks[path.current] = forklift
+
+					paths[index] = paths[len(paths)-1]
+					paths = paths[:len(paths)-1]
+					fmt.Println(path.current, "took", path.destination)
+				}
+			} else {
+				delete(wh.PalletJacks, path.current)
+				wh.PalletJacks[path.steps[0]] = forklift
+
+				fmt.Println("Moved", path.current, "to", path.steps[0])
+				paths[index].current = path.steps[0]
+				paths[index].steps = path.steps[1:]
+				index += 1
+			}
+		} else {
+			fmt.Println("Invalid path was kept")
+		}
+	}
+
+	return paths
 }
 
 func copyMap[T Package | PalletJack | Truck](toClone map[Position]T) map[Position]T {
