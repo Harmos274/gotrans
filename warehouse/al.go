@@ -10,63 +10,74 @@ const (
 	ALL = UP | RIGHT | DOWN | LEFT
 )
 
-func Test(wh Warehouse) {
-	paths := getPaths(wh)
+func refreshPaths(wh Warehouse, current_paths []Path) []Path {
+	targeted_packages, targeted_trucks := countPathsDestinations(wh, current_paths)
+	idle := getIdleForklifts(wh.PalletJacks, current_paths, true)
 
-	fmt.Println(paths)
-}
+	for pos := range idle {
+		path := pathToObject(wh, pos, current_paths, shouldGoToTruck)
 
-func getPaths(wh Warehouse) []Path {
-	distances := make([]Path, 0, min(len(wh.Packages), len(wh.PalletJacks)))
-
-	for pos := range wh.PalletJacks {
-		fmt.Println(pathToNearestPackage(wh, pos, distances))
+		if path.isValid() {
+			current_paths = append(current_paths, path)
+		}
 	}
 
-	return distances
+	idle = getIdleForklifts(wh.PalletJacks, current_paths, false)
+
+	for len(idle) > 0 && targeted_packages < len(wh.Packages) && targeted_trucks < len(wh.Trucks) {
+		pos := idle.randomElem()
+
+		path := pathToObject(wh, pos, current_paths, shouldGoToPackage)
+		replaced := false
+
+		if path.isValid() {
+			current_paths, replaced = insertPath(path, current_paths)
+		} else {
+			fmt.Println("Could not find path for", pos, "returned", path)
+		}
+
+		if replaced {
+			idle = getIdleForklifts(wh.PalletJacks, current_paths, false)
+		} else {
+			delete(idle, pos)
+		}
+	}
+
+	return current_paths
 }
 
-func pathToNearestPackage(wh Warehouse, start Position, other_paths []Path) Path {
+func pathToObject(wh Warehouse, start Position, other_paths []Path, validator validator) Path {
 	best_path := Path{current: start, destination: start}
 	current_path := []AttemptPosition{{Position: start, directions: ALL}}
 	pos_set := make(map[Position]struct{})
-	loops := 0
-	path_max := 0
 
 	for len(current_path) > 0 {
-		loops += 1
 		current_step := &current_path[len(current_path)-1]
 		next_move := nextDirection(current_step.directions)
 
 		if next_move != 0 && shouldKeepSearching(current_path, best_path) {
 			current_step.directions ^= next_move
 			move(wh, current_step.Position, next_move, &current_path, pos_set, &best_path,
-				other_paths)
+				other_paths, validator)
 		} else {
 			current_path = current_path[:len(current_path)-1]
 		}
-
-		if len(current_path) > path_max {
-			path_max = len(current_path)
-		}
 	}
-
-	fmt.Println(loops)
-	fmt.Println(path_max)
 
 	return best_path
 }
 
 func move(wh Warehouse, current_pos Position, direction int, path *[]AttemptPosition,
-	pos_set positionSet, current_best *Path, other_paths []Path) {
+	pos_set positionSet, current_best *Path, other_paths []Path, validator validator) {
 	new_pos, possible := getNewPos(current_pos, direction, wh.Length, wh.Height)
 
-	if !possible || alreadyVisited(pos_set, new_pos) {
+	if !possible || alreadyVisited(pos_set, new_pos) ||
+		isSomeoneOnThisTile(new_pos, other_paths, len(*path)-1) {
 		return
 	}
 
 	if wh.SomethingExistsAt(new_pos) {
-		if wh.Packages.Exists(new_pos) && shouldTakePackage(new_pos, other_paths) {
+		if validator(wh, *path, new_pos, other_paths) {
 			*current_best = attemptToPath(*path, new_pos)
 		} else {
 			return
@@ -137,8 +148,18 @@ func inverseDirection(direction int) int {
 	}
 }
 
-func shouldTakePackage(pos Position, other_paths []Path) bool {
-	return true
+func shouldGoToTruck(wh Warehouse, _ []AttemptPosition, pos Position, _ []Path) bool {
+	return wh.Trucks.Exists(pos)
+}
+
+func shouldGoToPackage(wh Warehouse, attempt []AttemptPosition, pos Position, other_paths []Path) bool {
+	if !wh.Packages.Exists(pos) {
+		return false
+	}
+
+	existing := getExistingPathTo(pos, other_paths)
+
+	return !existing.isValid() || len(attempt) < len(existing.steps)+1
 }
 
 func shouldKeepSearching(attempt []AttemptPosition, current_best Path) bool {
@@ -156,12 +177,36 @@ type AttemptPosition struct {
 	directions int
 }
 
-type positionSet = map[Position]struct{}
+type positionSet map[Position]struct{}
+
+type validator = func(Warehouse, []AttemptPosition, Position, []Path) bool
+
+func (self positionSet) randomElem() Position {
+	for pos := range self {
+		return pos
+	}
+
+	return Position{}
+}
 
 func alreadyVisited(set positionSet, pos Position) bool {
 	_, has := set[pos]
 
 	return has
+}
+
+func isSomeoneOnThisTile(pos Position, paths []Path, turn int) bool {
+	target := Position{3, 0}
+	if pos == target {
+		fmt.Println(paths, turn)
+	}
+	for _, path := range paths {
+		if len(path.steps) > turn && path.steps[turn] == pos {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (self Path) contains(pos Position) bool {
@@ -178,37 +223,58 @@ func (self Path) contains(pos Position) bool {
 	return false
 }
 
-func isUsed(pos Position, paths []Path) bool {
+func getExistingPathTo(pos Position, paths []Path) Path {
 	for _, path := range paths {
-		if pos == path.current || pos == path.destination {
-			return true
+		if pos == path.destination {
+			return path
 		}
 	}
 
-	return false
+	return Path{}
+}
+
+func insertPath(path Path, paths []Path) ([]Path, bool) {
+	for index, existing := range paths {
+		if existing.current == path.current {
+			paths[index] = path
+			return paths, true
+		}
+	}
+
+	return append(paths, path), false
+}
+
+func countPathsDestinations(wh Warehouse, paths []Path) (int, int) {
+	packages, trucks := 0, 0
+
+	for _, path := range paths {
+		if wh.Packages.Exists(path.destination) {
+			packages += 1
+		} else if wh.Trucks.Exists(path.destination) {
+			trucks += 1
+		}
+	}
+
+	return packages, trucks
+}
+
+func getIdleForklifts(forklifs EntityMap[PalletJack], paths []Path, loaded bool) positionSet {
+	idle_set := make(map[Position]struct{})
+
+	for pos, forklift := range forklifs {
+
+		if (forklift.pack != nil) == loaded {
+			idle_set[pos] = struct{}{}
+		}
+	}
+
+	for _, path := range paths {
+		delete(idle_set, path.current)
+	}
+
+	return idle_set
 }
 
 func (self Path) isValid() bool {
 	return self.current != self.destination
-}
-
-func distance(lhs Position, rhs Position) int {
-	return abs(lhs.X-rhs.X) + abs(lhs.Y-rhs.Y)
-}
-
-// The 80s called, they want their programming language design back
-func min(lhs int, rhs int) int {
-	if lhs < rhs {
-		return lhs
-	} else {
-		return rhs
-	}
-}
-
-func abs(nbr int) int {
-	if nbr < 0 {
-		return -nbr
-	} else {
-		return nbr
-	}
 }
