@@ -2,18 +2,17 @@ package warehouse
 
 import (
 	"fmt"
-	"time"
 )
 
 type Warehouse struct {
 	Length, Height int
 	Packages       EntityMap[Package]
-	PalletJacks    EntityMap[PalletJack]
+	ForkLifts      EntityMap[ForkLift]
 	Trucks         EntityMap[Truck]
 }
 
 func (wh Warehouse) SomethingExistsAt(pos Position) bool {
-	return wh.Packages.Exists(pos) || wh.PalletJacks.Exists(pos) || wh.Trucks.Exists(pos)
+	return wh.Packages.Exists(pos) || wh.ForkLifts.Exists(pos) || wh.Trucks.Exists(pos)
 }
 
 func (wh Warehouse) Clone() Warehouse {
@@ -22,13 +21,13 @@ func (wh Warehouse) Clone() Warehouse {
 	cloned.Height = wh.Height
 	cloned.Length = wh.Length
 	cloned.Packages = copyMap(wh.Packages)
-	cloned.PalletJacks = copyMap(wh.PalletJacks)
+	cloned.ForkLifts = copyMap(wh.ForkLifts)
 	cloned.Trucks = copyMap(wh.Trucks)
 
 	return cloned
 }
 
-type EntityMap[T Package | PalletJack | Truck] map[Position]T
+type EntityMap[T Package | ForkLift | Truck] map[Position]T
 
 type Position struct {
 	X, Y int
@@ -40,7 +39,7 @@ type Package struct {
 }
 type Weight int
 
-type PalletJack struct {
+type ForkLift struct {
 	Name  string
 	State string
 	pack  *Package
@@ -59,21 +58,16 @@ func (ettMap EntityMap[T]) Exists(pos Position) bool {
 	return exists
 }
 
-func CleanWarehouse(initialWarehouse Warehouse, ch chan Warehouse, cycles uint) {
+func CleanWarehouse(wh Warehouse, ch chan Warehouse, cycles uint) {
 	defer close(ch)
-	currentWarehouse := initialWarehouse
-	paths := refreshPaths(currentWarehouse, make([]Path, 0))
+	paths := refreshPaths(wh, make([]Path, 0))
 
-	fmt.Println("Initial paths", paths)
-	for ; cycles != 0; cycles -= 1 {
-		paths = applyPaths(initialWarehouse, paths)
-		fmt.Println("Paths after application", paths)
+	for ; cycles != 0 && !isOver(wh); cycles -= 1 {
+		paths = applyPaths(wh, paths)
 
-		ch <- currentWarehouse.Clone()
-		time.Sleep(100 * time.Millisecond)
+		ch <- wh.Clone()
 
-		paths = refreshPaths(currentWarehouse, paths)
-		fmt.Println("Paths after refresh", paths)
+		paths = refreshPaths(wh, paths)
 	}
 }
 
@@ -81,45 +75,17 @@ func applyPaths(wh Warehouse, paths []Path) []Path {
 	for index := 0; index < len(paths); {
 		path := paths[index]
 
-		fmt.Println("Tring to apply", path)
-
 		if path.isValid() {
-			forklift := wh.PalletJacks[path.current]
+			forklift := wh.ForkLifts[path.current]
 
 			if len(path.steps) == 0 {
 				if wh.Trucks.Exists(path.destination) {
-					truck := wh.Trucks[path.destination]
-
-					if truck.CurrentWeight+forklift.pack.Weight <= truck.MaxWeight {
-						truck.CurrentWeight += forklift.pack.Weight
-						forklift.pack = nil
-
-						wh.PalletJacks[path.current] = forklift
-						wh.Trucks[path.destination] = truck
-						paths[index] = paths[len(paths)-1]
-						paths = paths[:len(paths)-1]
-						fmt.Println(path.current, "dropped package to", path.destination)
-					}
+					paths, index = dropPackage(path, forklift, index, wh.ForkLifts, wh.Trucks, paths)
 				} else if wh.Packages.Exists(path.destination) {
-					// Take package from map
-					pack := wh.Packages[path.destination]
-					delete(wh.Packages, path.destination)
-
-					// Give package to forklift
-					forklift.pack = &pack
-					wh.PalletJacks[path.current] = forklift
-
-					paths[index] = paths[len(paths)-1]
-					paths = paths[:len(paths)-1]
-					fmt.Println(path.current, "took", path.destination)
+					paths = takePackage(path, forklift, index, wh.ForkLifts, wh.Packages, paths)
 				}
 			} else {
-				delete(wh.PalletJacks, path.current)
-				wh.PalletJacks[path.steps[0]] = forklift
-
-				fmt.Println("Moved", path.current, "to", path.steps[0])
-				paths[index].current = path.steps[0]
-				paths[index].steps = path.steps[1:]
+				paths = moveForkLift(path, forklift, index, wh.ForkLifts, paths)
 				index += 1
 			}
 		} else {
@@ -130,10 +96,72 @@ func applyPaths(wh Warehouse, paths []Path) []Path {
 	return paths
 }
 
-func copyMap[T Package | PalletJack | Truck](toClone map[Position]T) map[Position]T {
+func moveForkLift(path Path, forklift ForkLift, index int, forkLifts EntityMap[ForkLift],
+	paths []Path) []Path {
+	delete(forkLifts, path.current)
+	forkLifts[path.steps[0]] = forklift
+
+	paths[index].current = path.steps[0]
+	paths[index].steps = path.steps[1:]
+
+	return paths
+}
+
+func takePackage(path Path, forklift ForkLift, index int, forkLifts EntityMap[ForkLift],
+	packages EntityMap[Package], paths []Path) []Path {
+	// Take package from map
+	pack := packages[path.destination]
+	delete(packages, path.destination)
+
+	// Give package to forklift
+	forklift.pack = &pack
+	forkLifts[path.current] = forklift
+
+	paths[index] = paths[len(paths)-1]
+	return paths[:len(paths)-1]
+}
+
+func dropPackage(path Path, forklift ForkLift, index int, forkLifts EntityMap[ForkLift],
+	trucks EntityMap[Truck], paths []Path) ([]Path, int) {
+	truck := trucks[path.destination]
+
+	if truck.CurrentWeight+forklift.pack.Weight <= truck.MaxWeight {
+		truck.CurrentWeight += forklift.pack.Weight
+		forklift.pack = nil
+
+		forkLifts[path.current] = forklift
+		trucks[path.destination] = truck
+		paths[index] = paths[len(paths)-1]
+		paths = paths[:len(paths)-1]
+	} else {
+		index += 1
+	}
+
+	return paths, index
+}
+
+func copyMap[T Package | ForkLift | Truck](toClone map[Position]T) map[Position]T {
 	ret := make(map[Position]T)
 	for key, value := range toClone {
 		ret[key] = value
 	}
 	return ret
+}
+
+func isOver(wh Warehouse) bool {
+	if len(wh.ForkLifts) == 0 {
+		return true
+	}
+
+	if len(wh.Packages) > 0 {
+		return false
+	}
+
+	for _, forklift := range wh.ForkLifts {
+		if forklift.pack != nil {
+			return false
+		}
+	}
+
+	return true
 }

@@ -12,7 +12,7 @@ const (
 
 func refreshPaths(wh Warehouse, current_paths []Path) []Path {
 	targeted_packages := countTargetedPackages(wh, current_paths)
-	idle := getIdleForklifts(wh.PalletJacks, current_paths, true)
+	idle := getIdleForklifts(wh.ForkLifts, current_paths, true)
 
 	for pos := range idle {
 		path := pathToObject(wh, pos, current_paths, shouldGoToTruck)
@@ -22,10 +22,8 @@ func refreshPaths(wh Warehouse, current_paths []Path) []Path {
 		}
 	}
 
-	idle = getIdleForklifts(wh.PalletJacks, current_paths, false)
+	idle = getIdleForklifts(wh.ForkLifts, current_paths, false)
 
-	fmt.Println("Idle empty forklifts", idle)
-	fmt.Println(len(idle), "> 0 &&", targeted_packages, "<", len(wh.Packages))
 	for len(idle) > 0 && targeted_packages < len(wh.Packages) {
 		pos := idle.randomElem()
 
@@ -39,7 +37,7 @@ func refreshPaths(wh Warehouse, current_paths []Path) []Path {
 		}
 
 		if replaced {
-			idle = getIdleForklifts(wh.PalletJacks, current_paths, false)
+			idle = getIdleForklifts(wh.ForkLifts, current_paths, false)
 		} else {
 			delete(idle, pos)
 		}
@@ -62,13 +60,10 @@ func pathToObject(wh Warehouse, start Position, other_paths []Path, validator va
 			move(wh, current_step.Position, next_move, &current_path, pos_set, &best_path,
 				other_paths, validator)
 		} else {
-			//fmt.Println("Walking back from", current_step.Position.X, current_step.Position.Y, "best path is", best_path)
 			current_path = current_path[:len(current_path)-1]
 			delete(pos_set, current_step.Position)
 		}
 	}
-
-	fmt.Println("Computed best path for", start, best_path)
 
 	return best_path
 }
@@ -85,9 +80,7 @@ func move(wh Warehouse, current_pos Position, direction int, path *[]AttemptPosi
 	if wh.SomethingExistsAt(new_pos) {
 		if validator(wh, *path, new_pos, other_paths) {
 			*current_best = attemptToPath(*path, new_pos)
-			//fmt.Println("Found best", *current_best)
 		} else {
-			//fmt.Println("Collided with invalid object at", new_pos)
 			return
 		}
 	} else {
@@ -96,7 +89,6 @@ func move(wh Warehouse, current_pos Position, direction int, path *[]AttemptPosi
 			Position:   new_pos,
 		})
 		pos_set[new_pos] = struct{}{}
-		//fmt.Println("Moved to", new_pos)
 	}
 }
 
@@ -261,7 +253,7 @@ func countTargetedPackages(wh Warehouse, paths []Path) int {
 	return packages
 }
 
-func getIdleForklifts(forklifs EntityMap[PalletJack], paths []Path, loaded bool) positionSet {
+func getIdleForklifts(forklifs EntityMap[ForkLift], paths []Path, loaded bool) positionSet {
 	idle_set := make(map[Position]struct{})
 
 	for pos, forklift := range forklifs {
