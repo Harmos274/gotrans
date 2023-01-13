@@ -35,7 +35,8 @@ func main() {
 	file, err := os.Open(arguments[1])
 	if err != nil {
 		fmt.Println("😱")
-		log.Fatal(err)
+		_, _ = fmt.Fprint(os.Stderr, err)
+		return
 	}
 
 	defer func(file *os.File) {
@@ -48,9 +49,19 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if graphicMode && initWr.Height <= 8 && initWr.Length <= 6 {
-		runGraphic(initWr, cycles)
-		return
+	ch := make(chan warehouse.CycleState)
+
+	go warehouse.CleanWarehouse(initWr, ch, cycles)
+
+	currentCycle := 1
+	for state := range ch {
+		fmt.Printf("tour %d/%d\n", currentCycle, cycles)
+		fmt.Println(showableWarehouse(state))
+		currentCycle++
+	}
+
+	if currentCycle < int(cycles) {
+		fmt.Println("😎")
 	} else {
 		if graphicMode {
 			fmt.Print("!Warning: to active the graphic mode, the size of the map must not exceed 6x8\n\n")
@@ -63,7 +74,7 @@ func main() {
 		currentCycle := 1
 		for state := range ch {
 			fmt.Printf("tour %d/%d\n", currentCycle, cycles)
-			fmt.Println(ShowableWarehouse(state))
+			fmt.Println(showableWarehouse(state))
 			currentCycle++
 		}
 		if currentCycle < int(cycles) {

@@ -4,6 +4,12 @@ import (
 	"log"
 )
 
+// Warehouse description of the Warehouse
+// Length length of the Warehouse
+// Height height of the Warehouse
+// ForkLifts map of every ForkLift associated to their Position in the Warehouse
+// Packages map of every Package associated to their Position in the Warehouse
+// Trucks map of every Truck associated to their Position in the Warehouse
 type Warehouse struct {
 	Length, Height int
 	Packages       EntityMap[Package]
@@ -11,15 +17,20 @@ type Warehouse struct {
 	Trucks         EntityMap[Truck]
 }
 
+// CycleState association of the Warehouse and its associated events at a specific cycle
+// Warehouse the warehouse
+// Events the events
 type CycleState struct {
 	Warehouse Warehouse
 	Events    []Event
 }
 
+// SomethingExistsAt checks if something exists at a position in Warehouse
 func (wh Warehouse) SomethingExistsAt(pos Position) bool {
 	return wh.Packages.Exists(pos) || wh.ForkLifts.Exists(pos) || wh.Trucks.Exists(pos)
 }
 
+// Clone clone a Warehouse
 func (wh Warehouse) Clone() Warehouse {
 	var cloned Warehouse
 
@@ -32,38 +43,55 @@ func (wh Warehouse) Clone() Warehouse {
 	return cloned
 }
 
+// EntityMap a map of entities
 type EntityMap[T Package | ForkLift | Truck] map[Position]T
 
+// Position a position in a 2D plane
+// X the position in the X axis
+// Y the position in the Y axis
 type Position struct {
 	X, Y int
 }
 
+// Package description of a Package
+// Weight weight of the Package
+// Name name of the Package
 type Package struct {
 	Weight Weight
 	Name   string
 }
+
+// Weight a weight
 type Weight int
 
+// ForkLift description of a ForkLift
+// Name name of the ForkLift
 type ForkLift struct {
-	Name  string
-	State string
-	pack  *Package
+	Name string
+	pack *Package
 }
 
+// Truck description of a Truck
+// Name name of the Truck
+// MaxWeight maximum Weight of the Truck
+// CurrentWeight actual loaded Weight of the Truck
+// ElapseDischargingTime how many cycles are needed for the Truck to return
+// TimeUntilReturn the actual cycles left for the Truck to return
 type Truck struct {
 	Name                  string
-	State                 string
 	MaxWeight             Weight
 	CurrentWeight         Weight
 	ElapseDischargingTime int
 	TimeUntilReturn       int
 }
 
+// Exists check if something exists at this Position on the EntityMap
 func (ettMap EntityMap[T]) Exists(pos Position) bool {
 	_, exists := ettMap[pos]
 	return exists
 }
 
+// CleanWarehouse clean the Warehouse and populates the CycleState channel
 func CleanWarehouse(wh Warehouse, ch chan CycleState, cycles uint) {
 	defer close(ch)
 	paths := refreshPaths(wh, make([]Path, 0))

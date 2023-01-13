@@ -47,7 +47,7 @@ func generateMainLoop(initWr warehouse.Warehouse, cycles uint) func() {
 				gr.DisplayEntity("all")
 
 				fmt.Println("tour", currentCycle)
-				fmt.Println(ShowableWarehouse(wr))
+				fmt.Println(showableWarehouse(wr))
 				currentCycle += 1
 			} else if currentCycle != 0 {
 				fmt.Println("Terminé au tour", currentCycle-1)
