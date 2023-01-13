@@ -51,6 +51,11 @@ func generateMainLoop(initWr warehouse.Warehouse, cycles uint) func() {
 				currentCycle += 1
 			} else if currentCycle != 0 {
 				fmt.Println("Terminé au tour", currentCycle-1)
+				if currentCycle < int(cycles) {
+					fmt.Println("😎")
+				} else {
+					fmt.Println("🙂")
+				}
 				currentCycle = 0
 			}
 			gr.UpdateWindow()

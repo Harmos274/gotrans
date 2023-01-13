@@ -66,11 +66,11 @@ func main() {
 			fmt.Println(ShowableWarehouse(state))
 			currentCycle++
 		}
+		if currentCycle < int(cycles) {
+			fmt.Println("😎")
+		} else {
+			fmt.Println("🙂")
+		}
 	}
 
-	if currentCycle < int(cycles) {
-		fmt.Println("😎")
-	} else {
-		fmt.Println("🙂")
-	}
 }
