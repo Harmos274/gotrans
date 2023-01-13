@@ -31,7 +31,8 @@ func main() {
 	file, err := os.Open(arguments[1])
 	if err != nil {
 		fmt.Println("😱")
-		log.Fatal(err)
+		_, _ = fmt.Fprint(os.Stderr, err)
+		return
 	}
 
 	defer func(file *os.File) {
