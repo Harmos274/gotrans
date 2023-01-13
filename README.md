@@ -58,7 +58,7 @@ of the program in the `gotrans.go` file.
 
 There's also the `parse_input_file.go` file, whose role is to handle the parsing of the input file given by
 the users inputs, the `show_warehouse.go` that contains everything needed to print the warehouse on the
-terminal and the `graphical.go` that contains the functions needed to run the graphical UI.
+terminal and `graphical.go` that contains the functions needed to run the graphical UI.
 
 In the `warehouse` package, the `warehouse.go` file contains the description of the Warehouse and the
 functions to modify its data. The `event.go` file describes all the events occurring during the warehouse
