@@ -3,10 +3,9 @@ package main
 
 import (
 	"fmt"
+	"github.com/Harmos274/gotrans/warehouse"
 	"log"
 	"os"
-
-	"github.com/Harmos274/gotrans/warehouse"
 )
 
 const HelpText = "Gotrans\n" +
@@ -20,6 +19,7 @@ const HelpText = "Gotrans\n" +
 
 func main() {
 	arguments := os.Args
+	graphicMode := false
 
 	if len(arguments) < 2 {
 		_, _ = fmt.Fprintf(os.Stderr, HelpText)
@@ -28,8 +28,7 @@ func main() {
 		fmt.Printf("%s\n", HelpText)
 		return
 	} else if len(arguments) > 2 && (arguments[2] == "-g" || arguments[2] == "--graphic") {
-		runGraphic(arguments[1])
-		return
+		graphicMode = true
 	}
 
 	file, err := os.Open(arguments[1])
@@ -46,14 +45,21 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ch := make(chan warehouse.CycleState)
+	if graphicMode {
+		runGraphic(initWr, cycles)
+		return
+	} else {
+		// TUI
+		ch := make(chan warehouse.CycleState)
 
-	go warehouse.CleanWarehouse(initWr, ch, cycles)
+		go warehouse.CleanWarehouse(initWr, ch, cycles)
 
-	currentCycle := 1
-	for state := range ch {
-		fmt.Printf("tour %d/%d\n", currentCycle, cycles)
-		fmt.Println(ShowableWarehouse(state))
-		currentCycle++
+		currentCycle := 1
+		for state := range ch {
+			fmt.Printf("tour %d/%d\n", currentCycle, cycles)
+			fmt.Println(ShowableWarehouse(state))
+			currentCycle++
+		}
 	}
+
 }

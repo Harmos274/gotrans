@@ -2,9 +2,7 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"math/rand"
-	"os"
 	"strconv"
 	"time"
 
@@ -16,65 +14,49 @@ import (
 	"golang.org/x/image/font/basicfont"
 )
 
-var File string
-
-func runGraphic(file string) {
-	File = file
-	pixelgl.Run(run)
+func runGraphic(initWr warehouse.Warehouse, cycles uint) {
+	pixelgl.Run(generateMainLoop(initWr, cycles))
 }
 
-func run() {
-	file, err := os.Open(File)
-	if err != nil {
-		log.Fatal(err)
-	}
+func generateMainLoop(initWr warehouse.Warehouse, cycles uint) func() {
+	return func() {
+		ch := make(chan warehouse.CycleState)
 
-	defer func(file *os.File) {
-		_ = file.Close()
-	}(file)
+		go warehouse.CleanWarehouse(initWr, ch, cycles)
 
-	initWr, cycles, err := parseInputFile(file)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	ch := make(chan warehouse.CycleState)
-
-	go warehouse.CleanWarehouse(initWr, ch, cycles)
-
-	var gr Graphical
-	gr.CreateWindow()
-	gr.CreateText("tour", 1, 0.5)
-	for y := 1; y <= int(initWr.Height); y += 1 {
-		for x := 1; x <= int(initWr.Length); x += 1 {
-			gr.CreateRectangle(strconv.Itoa(y)+"/"+strconv.Itoa(x), x, y)
+		var gr Graphical
+		gr.CreateWindow()
+		gr.CreateText("tour", 1, 0.5)
+		for y := 1; y <= int(initWr.Height); y += 1 {
+			for x := 1; x <= int(initWr.Length); x += 1 {
+				gr.CreateRectangle(strconv.Itoa(y)+"/"+strconv.Itoa(x), x, y)
+			}
 		}
-	}
 
-	currentCycle := 1
-	for !gr.IsWindowClosed() {
-		time.Sleep(time.Second)
-		wr, ok := <-ch
-		if ok {
-			gr.ClearText("tour")
-			placeEntities(wr.Warehouse, &gr)
-			gr.ClearWindow()
-			gr.ChangeText("tour", "tour "+strconv.Itoa(currentCycle))
-			gr.DisplayRectangle("all")
-			gr.DisplayText("all")
-			gr.DisplayEntity("all")
+		currentCycle := 1
+		for !gr.IsWindowClosed() {
+			time.Sleep(time.Second)
+			wr, ok := <-ch
+			if ok {
+				gr.ClearText("tour")
+				placeEntities(wr.Warehouse, &gr)
+				gr.ClearWindow()
+				gr.ChangeText("tour", "tour "+strconv.Itoa(currentCycle))
+				gr.DisplayRectangle("all")
+				gr.DisplayText("all")
+				gr.DisplayEntity("all")
 
-			fmt.Println("tour", currentCycle)
-			fmt.Println(ShowableWarehouse(wr))
-			currentCycle += 1
-		} else if currentCycle != 0 {
-			fmt.Println("Terminé au tour", currentCycle-1)
-			currentCycle = 0
+				fmt.Println("tour", currentCycle)
+				fmt.Println(ShowableWarehouse(wr))
+				currentCycle += 1
+			} else if currentCycle != 0 {
+				fmt.Println("Terminé au tour", currentCycle-1)
+				currentCycle = 0
+			}
+			gr.UpdateWindow()
 		}
-		gr.UpdateWindow()
 	}
 }
-
 func placeEntities(initWr warehouse.Warehouse, gr *Graphical) {
 	gr.ClearEntities()
 	for pos, trucks := range initWr.Trucks {
@@ -149,7 +131,7 @@ func (g *Graphical) CreateText(id string, x float64, y float64) bool {
 	}
 	txt := text.New(pixel.V((x+0.5)*g.xRatio, y*g.yRatio), text.NewAtlas(basicfont.Face7x13, text.ASCII))
 	txt.Color = pixel.RGB(1, 1, 1)
-	fmt.Fprintln(txt, id)
+	_, _ = fmt.Fprintln(txt, id)
 	g.texts[id] = txt
 	return true
 }
@@ -168,7 +150,7 @@ func (g *Graphical) ChangeText(id string, newText string) bool {
 	if !exists {
 		return false
 	}
-	fmt.Fprintln(txt, newText)
+	_, _ = fmt.Fprintln(txt, newText)
 	return true
 }
 
@@ -239,7 +221,7 @@ func (g *Graphical) CreateEntity(id string, x int, y int) bool {
 	txt := text.New(pixel.V((float64(x+1)+0.5)*g.xRatio, (float64(y)+0.5)*g.yRatio), text.NewAtlas(basicfont.Face7x13, text.ASCII))
 	txt.Color = pixel.RGB(1, 1, 1)
 	txt.Dot.X -= txt.BoundsOf(id).W() / 2
-	fmt.Fprintln(txt, id)
+	_, _ = fmt.Fprintln(txt, id)
 
 	real_x := float64(x+1) * g.xRatio
 	real_y := float64(y) * g.yRatio
@@ -272,7 +254,7 @@ func (g *Graphical) AddEntityInformation(id string, info string) bool {
 		return false
 	}
 	entity.text.Dot.X -= entity.text.BoundsOf(info).W() / 2
-	fmt.Fprintln(entity.text, info)
+	_, _ = fmt.Fprintln(entity.text, info)
 	return true
 }
 
