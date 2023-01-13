@@ -9,7 +9,7 @@ import (
 	"github.com/Harmos274/gotrans/warehouse"
 )
 
-const HelpText = "Gotrans\n" +
+const helpText = "Gotrans\n" +
 	"=========\n" +
 	"Giving a file that describes a warehouse with packages, forklifts and trucks inside it,\n" +
 	"the program will have to optimise the distribution of packages to trucks using the forklifts.\n\n" +
@@ -23,10 +23,10 @@ func main() {
 	graphicMode := false
 
 	if len(arguments) < 2 {
-		_, _ = fmt.Fprintf(os.Stderr, HelpText)
+		_, _ = fmt.Fprint(os.Stderr, helpText)
 		os.Exit(1)
 	} else if arguments[1] == "-h" || arguments[1] == "--help" {
-		fmt.Printf("%s\n", HelpText)
+		fmt.Printf("%s\n", helpText)
 		return
 	} else if len(arguments) > 2 && (arguments[2] == "-g" || arguments[2] == "--graphic") {
 		graphicMode = true
@@ -34,6 +34,7 @@ func main() {
 
 	file, err := os.Open(arguments[1])
 	if err != nil {
+		fmt.Println("😱")
 		log.Fatal(err)
 	}
 
@@ -43,6 +44,7 @@ func main() {
 
 	initWr, cycles, err := parseInputFile(file)
 	if err != nil {
+		fmt.Println("😱")
 		log.Fatal(err)
 	}
 
@@ -66,4 +68,9 @@ func main() {
 		}
 	}
 
+	if currentCycle < int(cycles) {
+		fmt.Println("😎")
+	} else {
+		fmt.Println("🙂")
+	}
 }
