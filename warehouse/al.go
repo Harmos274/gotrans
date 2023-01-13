@@ -14,6 +14,13 @@ const (
 	lEFT
 )
 
+// Path represent a ForkLift's Path with its current Position its target and all the steps
+type Path struct {
+	current     Position
+	destination Position
+	steps       []Position
+}
+
 type direction = int
 
 func refreshPaths(wh Warehouse, currentPaths []Path) []Path {
@@ -224,13 +231,7 @@ func shouldGoToPackage(wh Warehouse, attempt []attemptPosition, pos Position, ot
 }
 
 func shouldKeepSearching(attempt []attemptPosition, currentBest Path) bool {
-	return (!currentBest.isValid() || len(attempt) <= len(currentBest.steps))
-}
-
-type Path struct {
-	current     Position
-	destination Position
-	steps       []Position
+	return !currentBest.isValid() || len(attempt) <= len(currentBest.steps)
 }
 
 type attemptPosition struct {
@@ -306,10 +307,10 @@ func countTargetedPackages(wh Warehouse, paths []Path) int {
 	return packages
 }
 
-func getIdleForklifts(forklifs EntityMap[ForkLift], paths []Path, loaded bool) positionSet {
+func getIdleForklifts(forklifts EntityMap[ForkLift], paths []Path, loaded bool) positionSet {
 	idleSet := make(map[Position]struct{})
 
-	for pos, forklift := range forklifs {
+	for pos, forklift := range forklifts {
 		if (forklift.pack != nil) == loaded {
 			idleSet[pos] = struct{}{}
 		}
