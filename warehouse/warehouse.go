@@ -45,14 +45,12 @@ type Package struct {
 type Weight int
 
 type ForkLift struct {
-	Name  string
-	State string
-	pack  *Package
+	Name string
+	pack *Package
 }
 
 type Truck struct {
 	Name                  string
-	State                 string
 	MaxWeight             Weight
 	CurrentWeight         Weight
 	ElapseDischargingTime int
