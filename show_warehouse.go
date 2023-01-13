@@ -10,14 +10,14 @@ import (
 type ShowableWarehouse warehouse.Warehouse
 
 func (sw ShowableWarehouse) WarehouseMap() string {
-	w := strings.Repeat("#", int(sw.Length)*2+2)
-	for y := 0; y < int(sw.Height); y++ {
+	w := strings.Repeat("#", sw.Length*2+2)
+	for y := 0; y < sw.Height; y++ {
 		w += "#\n# "
-		for x := 0; x < int(sw.Length); x++ {
+		for x := 0; x < sw.Length; x++ {
 			pos := warehouse.Position{X: x, Y: y}
 			if sw.Packages.Exists(pos) {
 				w += "P "
-			} else if sw.PalletJacks.Exists(pos) {
+			} else if sw.ForkLifts.Exists(pos) {
 				w += "J "
 			} else if sw.Trucks.Exists(pos) {
 				w += "T "
@@ -26,21 +26,21 @@ func (sw ShowableWarehouse) WarehouseMap() string {
 			}
 		}
 	}
-	w += "#\n" + strings.Repeat("#", int(sw.Length)*2+3) + "\n"
+	w += "#\n" + strings.Repeat("#", sw.Length*2+3) + "\n"
 	return w
 }
 
 func (sw ShowableWarehouse) Output() string {
 	var output string
-	for pos, palletJack := range sw.PalletJacks {
-		output += fmt.Sprintf("%s %s", palletJack.Name, palletJack.State)
-		switch palletJack.State {
+	for pos, forkLift := range sw.ForkLifts {
+		output += fmt.Sprintf("%s %s", forkLift.Name, forkLift.State)
+		switch forkLift.State {
 		case "GO":
 			output += fmt.Sprintf(" [%d,%d]\n", pos.X, pos.Y)
 		case "TAKE":
-			// output += fmt.Sprintf(" %s %v\n", palletJack.pack.Name, palletJack.pack.Weight)
+			// output += fmt.Sprintf(" %s %v\n", forkLift.pack.Name, forkLift.pack.Weight)
 		case "LEAVE":
-			// output += fmt.Sprintf(" %s %v\n", palletJack.pack.Name, palletJack.pack.Weight)
+			// output += fmt.Sprintf(" %s %v\n", forkLift.pack.Name, forkLift.pack.Weight)
 		default:
 			output += "\n"
 		}

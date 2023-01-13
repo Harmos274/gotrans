@@ -1,3 +1,4 @@
+// Responsible for parsing the input file and displaying the output
 package main
 
 import (
@@ -28,7 +29,6 @@ func main() {
 	}
 
 	file, err := os.Open(arguments[1])
-
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -38,7 +38,6 @@ func main() {
 	}(file)
 
 	initWr, cycles, err := parseInputFile(file)
-
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -47,11 +46,12 @@ func main() {
 
 	go warehouse.CleanWarehouse(initWr, ch, cycles)
 
-	actualCycle := 1
+	fmt.Println(ShowableWarehouse(initWr))
+
+	currentCycle := 1
 	for wr := range ch {
-		fmt.Println("tour", actualCycle)
+		fmt.Println("tour", currentCycle)
 		fmt.Println(ShowableWarehouse(wr))
-		actualCycle += 1
+		currentCycle++
 	}
-	return
 }

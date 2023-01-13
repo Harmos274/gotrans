@@ -36,7 +36,7 @@ func parseInputFile(file *os.File) (warehouse Warehouse, cycles uint, err error)
 			err = packErr
 			return
 		}
-		if warehouse.SomethingExistsAtThisPosition(pos) {
+		if warehouse.SomethingExistsAt(pos) {
 			err = errors.New("two entities can't be at the same position")
 			return
 		}
@@ -49,16 +49,16 @@ func parseInputFile(file *os.File) (warehouse Warehouse, cycles uint, err error)
 		if len(words) != 3 {
 			break
 		}
-		pj, pos, pjErr := parsePalletJack(words)
+		pj, pos, pjErr := parseForkLift(words)
 		if pjErr != nil {
 			err = pjErr
 			return
 		}
-		if warehouse.SomethingExistsAtThisPosition(pos) {
+		if warehouse.SomethingExistsAt(pos) {
 			err = errors.New("two entities can't be at the same position")
 			return
 		}
-		warehouse.PalletJacks[pos] = pj
+		warehouse.ForkLifts[pos] = pj
 		if !scanner.Scan() {
 			return
 		}
@@ -76,7 +76,7 @@ func parseInputFile(file *os.File) (warehouse Warehouse, cycles uint, err error)
 			err = truckErr
 			return
 		}
-		if warehouse.SomethingExistsAtThisPosition(pos) {
+		if warehouse.SomethingExistsAt(pos) {
 			err = errors.New("two entities can't be at the same position")
 			return
 		}
@@ -100,7 +100,7 @@ func parseWarehouse(line string) (warehouse Warehouse, cycles uint, err error) {
 		return
 	}
 	warehouse.Packages = make(EntityMap[Package])
-	warehouse.PalletJacks = make(EntityMap[PalletJack])
+	warehouse.ForkLifts = make(EntityMap[ForkLift])
 	warehouse.Trucks = make(EntityMap[Truck])
 	return
 }
@@ -126,13 +126,13 @@ func parsePackage(words []string) (pack Package, position Position, err error) {
 	return
 }
 
-func parsePalletJack(words []string) (pj PalletJack, position Position, err error) {
+func parseForkLift(words []string) (pj ForkLift, position Position, err error) {
 	pj.Name = words[0]
 	x, err1 := strconv.Atoi(words[1])
 	y, err2 := strconv.Atoi(words[2])
 
 	if err1 != nil || err2 != nil {
-		err = errors.New("invalid pallet jack formatting")
+		err = errors.New("invalid forklift formatting")
 		return
 	}
 	position.X = x
