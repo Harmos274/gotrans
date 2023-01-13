@@ -7,50 +7,38 @@ import (
 	"github.com/Harmos274/gotrans/warehouse"
 )
 
-type ShowableWarehouse warehouse.Warehouse
+type ShowableWarehouse warehouse.CycleState
 
 func (sw ShowableWarehouse) WarehouseMap() string {
-	w := strings.Repeat("#", sw.Length*2+2)
-	for y := 0; y < sw.Height; y++ {
+	wr := sw.Warehouse
+	w := strings.Repeat("#", wr.Length*2+2)
+	for y := 0; y < wr.Height; y++ {
 		w += "#\n# "
-		for x := 0; x < sw.Length; x++ {
+		for x := 0; x < wr.Length; x++ {
 			pos := warehouse.Position{X: x, Y: y}
-			if sw.Packages.Exists(pos) {
-				w += "P "
-			} else if sw.ForkLifts.Exists(pos) {
-				w += "J "
-			} else if sw.Trucks.Exists(pos) {
-				w += "T "
+			if wr.Packages.Exists(pos) {
+				w += "📦"
+			} else if wr.ForkLifts.Exists(pos) {
+				w += "👷"
+			} else if wr.Trucks.Exists(pos) {
+				w += "🚚"
 			} else {
 				w += "  "
 			}
 		}
 	}
-	w += "#\n" + strings.Repeat("#", sw.Length*2+3) + "\n"
+	w += "#\n" + strings.Repeat("#", wr.Length*2+3) + "\n"
 	return w
 }
 
 func (sw ShowableWarehouse) Output() string {
 	var output string
-	for pos, forkLift := range sw.ForkLifts {
-		output += fmt.Sprintf("%s %s", forkLift.Name, forkLift.State)
-		switch forkLift.State {
-		case "GO":
-			output += fmt.Sprintf(" [%d,%d]\n", pos.X, pos.Y)
-		case "TAKE":
-			// output += fmt.Sprintf(" %s %v\n", forkLift.pack.Name, forkLift.pack.Weight)
-		case "LEAVE":
-			// output += fmt.Sprintf(" %s %v\n", forkLift.pack.Name, forkLift.pack.Weight)
-		default:
-			output += "\n"
-		}
-	}
-	for _, truck := range sw.Trucks {
-		output += fmt.Sprintf("%s %s %d/%d\n", truck.Name, truck.State, truck.CurrentWeight, truck.MaxWeight)
+	for _, e := range sw.Events {
+		fmt.Println(e)
 	}
 	return output
 }
 
 func (sw ShowableWarehouse) String() string {
-	return sw.Output()
+	return sw.Output() + sw.WarehouseMap()
 }
