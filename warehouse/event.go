@@ -1,5 +1,7 @@
 package warehouse
 
+import "fmt"
+
 // Event events occurring while cleaning the warehouse
 // EmitterName Returns event's emitter name
 // AtPosition Returns event's emission position
@@ -12,6 +14,10 @@ type PickupPackage struct {
 	position    Position
 	emitterName string
 	packName    string
+}
+
+func (pickPack PickupPackage) String() string {
+	return fmt.Sprintf("%s is taking the package %s at position [%d,%d]", pickPack.emitterName, pickPack.packName, pickPack.position.X, pickPack.position.Y)
 }
 
 func (pickPack PickupPackage) EmitterName() string {
@@ -31,6 +37,10 @@ type ForkliftWait struct {
 	position     Position
 }
 
+func (fw ForkliftWait) String() string {
+	return fmt.Sprintf("%s is waiting at position [%d,%d]", fw.forkliftName, fw.position.X, fw.position.Y)
+}
+
 func (fw ForkliftWait) EmitterName() string {
 	return fw.forkliftName
 }
@@ -43,6 +53,10 @@ type ForkliftMove struct {
 	forkliftName  string
 	eventPosition Position
 	target        Position
+}
+
+func (f ForkliftMove) String() string {
+	return fmt.Sprintf("%s move from [%d,%d] to [%d,%d]", f.forkliftName, f.eventPosition.X, f.eventPosition.Y, f.target.X, f.target.Y)
 }
 
 func (f ForkliftMove) EmitterName() string {
@@ -63,6 +77,10 @@ type DeliverPackage struct {
 	packName    string
 }
 
+func (d DeliverPackage) String() string {
+	return fmt.Sprintf("%s is delivering the package %s", d.emitterName, d.packName)
+}
+
 func (d DeliverPackage) EmitterName() string {
 	return d.emitterName
 }
@@ -80,6 +98,10 @@ type TruckWait struct {
 	truckMaxWeight    Weight
 	truckLoadedWeight Weight
 	position          Position
+}
+
+func (t TruckWait) String() string {
+	return fmt.Sprintf("%s is waiting. %d/%d", t.truckName, t.truckLoadedWeight, t.truckMaxWeight)
 }
 
 func (t TruckWait) EmitterName() string {
@@ -103,6 +125,10 @@ type TruckGone struct {
 	truckMaxWeight     Weight
 	truckChargedWeight Weight
 	position           Position
+}
+
+func (t TruckGone) String() string {
+	return fmt.Sprintf("%s is gone. %d/%d", t.truckName, t.truckChargedWeight, t.truckMaxWeight)
 }
 
 func (t TruckGone) EmitterName() string {

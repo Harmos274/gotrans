@@ -46,12 +46,10 @@ func main() {
 
 	go warehouse.CleanWarehouse(initWr, ch, cycles)
 
-	fmt.Println(ShowableWarehouse(initWr))
-
 	currentCycle := 1
 	for state := range ch {
-		fmt.Println("tour", currentCycle)
-		fmt.Println(ShowableWarehouse(state.Warehouse))
+		fmt.Printf("tour %d/%d\n", currentCycle, cycles)
+		fmt.Println(ShowableWarehouse(state))
 		currentCycle++
 	}
 }
