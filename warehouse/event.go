@@ -120,3 +120,17 @@ func (t TruckGone) ChargedWeight() Weight {
 func (t TruckGone) MaxWeight() Weight {
 	return t.truckMaxWeight
 }
+
+func createTruckWait(truck Truck, pos Position) TruckWait {
+	return TruckWait{
+		truckName: truck.Name, truckMaxWeight: truck.MaxWeight,
+		truckLoadedWeight: truck.CurrentWeight, position: pos,
+	}
+}
+
+func createTruckGone(truck Truck, pos Position) TruckGone {
+	return TruckGone{
+		truckName: truck.Name, truckMaxWeight: truck.MaxWeight,
+		truckChargedWeight: truck.CurrentWeight, position: pos,
+	}
+}

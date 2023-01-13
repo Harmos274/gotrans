@@ -232,20 +232,6 @@ func sendTruck(pos Position, trucks EntityMap[Truck]) {
 	}
 }
 
-func createTruckWait(truck Truck, pos Position) TruckWait {
-	return TruckWait{
-		truckName: truck.Name, truckMaxWeight: truck.MaxWeight,
-		truckLoadedWeight: truck.CurrentWeight, position: pos,
-	}
-}
-
-func createTruckGone(truck Truck, pos Position) TruckGone {
-	return TruckGone{
-		truckName: truck.Name, truckMaxWeight: truck.MaxWeight,
-		truckChargedWeight: truck.CurrentWeight, position: pos,
-	}
-}
-
 func copyMap[T Package | ForkLift | Truck](toClone map[Position]T) map[Position]T {
 	ret := make(map[Position]T)
 	for key, value := range toClone {

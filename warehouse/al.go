@@ -21,8 +21,8 @@ func refreshPaths(wh Warehouse, currentPaths []Path) []Path {
 	idle := getIdleForklifts(wh.ForkLifts, currentPaths, true)
 	trucks := mapToPositionSet(wh.Trucks)
 	for pos := range idle {
-		truckValidator := func(_ []attemptPosition, target_pos Position) bool {
-			return wh.Trucks[target_pos].MaxWeight >= wh.ForkLifts[pos].pack.Weight
+		truckValidator := func(_ []attemptPosition, targetPos Position) bool {
+			return wh.Trucks[targetPos].MaxWeight >= wh.ForkLifts[pos].pack.Weight
 		}
 		path := pathToObject(wh, pos, trucks, currentPaths, truckValidator)
 
