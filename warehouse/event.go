@@ -76,10 +76,10 @@ func (d DeliverPackage) PackageName() string {
 }
 
 type TruckWait struct {
-	truckName          string
-	truckMaxWeight     Weight
-	truckChargedWeight Weight
-	position           Position
+	truckName         string
+	truckMaxWeight    Weight
+	truckLoadedWeight Weight
+	position          Position
 }
 
 func (t TruckWait) EmitterName() string {
@@ -91,7 +91,7 @@ func (t TruckWait) AtPosition() Position {
 }
 
 func (t TruckWait) ChargedWeight() Weight {
-	return t.truckChargedWeight
+	return t.truckLoadedWeight
 }
 
 func (t TruckWait) MaxWeight() Weight {

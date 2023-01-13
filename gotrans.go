@@ -20,7 +20,7 @@ const HelpText = "Gotrans\n" +
 func main() {
 	arguments := os.Args
 
-	if len(arguments) < 1 {
+	if len(arguments) < 2 {
 		_, _ = fmt.Fprintf(os.Stderr, HelpText)
 		os.Exit(1)
 	} else if arguments[1] == "-h" || arguments[1] == "--help" {
@@ -42,16 +42,16 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ch := make(chan warehouse.Warehouse)
+	ch := make(chan warehouse.CycleState)
 
 	go warehouse.CleanWarehouse(initWr, ch, cycles)
 
 	fmt.Println(ShowableWarehouse(initWr))
 
 	currentCycle := 1
-	for wr := range ch {
+	for state := range ch {
 		fmt.Println("tour", currentCycle)
-		fmt.Println(ShowableWarehouse(wr))
+		fmt.Println(ShowableWarehouse(state.Warehouse))
 		currentCycle++
 	}
 }
