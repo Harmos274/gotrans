@@ -1,8 +1,9 @@
 package warehouse
 
+// Event events occurring while cleaning the warehouse
 // EmitterName Returns event's emitter name
 // AtPosition Returns event's emission position
-type event interface {
+type Event interface {
 	EmitterName() string
 	AtPosition() Position
 }
