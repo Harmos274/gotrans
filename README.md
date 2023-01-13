@@ -67,3 +67,11 @@ warehouse process.
 
 ## Pathfinding strategy
 
+For each `forklift` the algorithm find the quickest path to go to every `package` in the `warehouse`,
+if the `forklift` find a shorter path than another, its path is chosen, otherwise the `package` is
+removed from the `forklift`'s targets and another `package` is selected.
+
+Once the `forklift` arrives by the `package` it picks it up and search the quickest path to the `truck`.
+When the `forklift` arrives by the `truck` it loads its `package` in the `truck`, if possible, otherwise it waits.
+
+Once the `package` has been delivered the `forklift` go to another targets if there's one.
