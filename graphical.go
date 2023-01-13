@@ -26,7 +26,7 @@ func generateMainLoop(initWr warehouse.Warehouse, cycles uint) func() {
 
 		var gr Graphical
 		gr.CreateWindow()
-		gr.CreateText("tour", 1, 0.5)
+		gr.CreateText("tour", 0.5, 0.25)
 		for y := 1; y <= int(initWr.Height); y += 1 {
 			for x := 1; x <= int(initWr.Length); x += 1 {
 				gr.CreateRectangle(strconv.Itoa(y)+"/"+strconv.Itoa(x), x, y)
@@ -57,6 +57,7 @@ func generateMainLoop(initWr warehouse.Warehouse, cycles uint) func() {
 		}
 	}
 }
+
 func placeEntities(initWr warehouse.Warehouse, gr *Graphical) {
 	gr.ClearEntities()
 	for pos, trucks := range initWr.Trucks {
@@ -72,10 +73,9 @@ func placeEntities(initWr warehouse.Warehouse, gr *Graphical) {
 }
 
 type GraphicalEntity struct {
-	text        *text.Text
-	information *text.Text
-	rect        *imdraw.IMDraw
-	color       pixel.RGBA
+	text  *text.Text
+	rect  *imdraw.IMDraw
+	color pixel.RGBA
 }
 
 type Graphical struct {
@@ -91,9 +91,11 @@ type Graphical struct {
 // ######################
 func (g *Graphical) CreateWindow() {
 	cfg := pixelgl.WindowConfig{
-		Title:  "GOTRANS",
-		Bounds: pixel.R(0, 0, 1750, 700),
-		VSync:  true,
+		Title:     "GOTRANS",
+		Bounds:    pixel.R(0, 0, 1750, 700),
+		VSync:     true,
+		Resizable: true,
+		Maximized: true,
 	}
 	win, err := pixelgl.NewWindow(cfg)
 	if err != nil {
@@ -101,7 +103,6 @@ func (g *Graphical) CreateWindow() {
 	}
 	g.win = win
 	g.ClearWindow()
-	// win.SetSmooth(true)
 	g.texts = make(map[string]*text.Text)
 	g.rects = make(map[string]*imdraw.IMDraw)
 	g.entities = make(map[string]GraphicalEntity)
@@ -130,6 +131,9 @@ func (g *Graphical) CreateText(id string, x float64, y float64) bool {
 		return false
 	}
 	txt := text.New(pixel.V((x+0.5)*g.xRatio, y*g.yRatio), text.NewAtlas(basicfont.Face7x13, text.ASCII))
+	if txt == nil {
+		return false
+	}
 	txt.Color = pixel.RGB(1, 1, 1)
 	_, _ = fmt.Fprintln(txt, id)
 	g.texts[id] = txt
@@ -219,6 +223,9 @@ func (g *Graphical) CreateEntity(id string, x int, y int) bool {
 		entityColor = pixel.RGB(rand.Float64(), rand.Float64(), rand.Float64())
 	}
 	txt := text.New(pixel.V((float64(x+1)+0.5)*g.xRatio, (float64(y)+0.5)*g.yRatio), text.NewAtlas(basicfont.Face7x13, text.ASCII))
+	if txt == nil {
+		return false
+	}
 	txt.Color = pixel.RGB(1, 1, 1)
 	txt.Dot.X -= txt.BoundsOf(id).W() / 2
 	_, _ = fmt.Fprintln(txt, id)
@@ -242,15 +249,12 @@ func (g *Graphical) ClearEntities() {
 	for _, entity := range g.entities {
 		entity.rect.Clear()
 		entity.text.Clear()
-		if entity.information != nil {
-			entity.information.Clear()
-		}
 	}
 }
 
 func (g *Graphical) AddEntityInformation(id string, info string) bool {
 	entity, exists := g.entities[id]
-	if !exists {
+	if !exists || entity.text == nil {
 		return false
 	}
 	entity.text.Dot.X -= entity.text.BoundsOf(info).W() / 2
@@ -263,9 +267,6 @@ func (g *Graphical) DisplayEntity(id string) bool {
 		for _, entity := range g.entities {
 			entity.rect.Draw(g.win)
 			entity.text.Draw(g.win, pixel.IM.Scaled(entity.text.Orig, 2))
-			if entity.information != nil {
-				entity.information.Draw(g.win, pixel.IM.Scaled(entity.text.Orig, 2))
-			}
 		}
 		return true
 	}

@@ -3,9 +3,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/Harmos274/gotrans/warehouse"
 	"log"
 	"os"
+
+	"github.com/Harmos274/gotrans/warehouse"
 )
 
 const HelpText = "Gotrans\n" +
@@ -14,7 +15,7 @@ const HelpText = "Gotrans\n" +
 	"the program will have to optimise the distribution of packages to trucks using the forklifts.\n\n" +
 	"Commands:\n" +
 	"-h --help\tShow help\n" +
-	"-g\t\tDisplay graphical information\n" +
+	"-g --graphic\tActivate the graphic mode\n" +
 	"<file>\t\tlaunch the program\n"
 
 func main() {
@@ -45,10 +46,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if graphicMode {
+	if graphicMode && initWr.Height <= 8 && initWr.Length <= 6 {
 		runGraphic(initWr, cycles)
 		return
 	} else {
+		if graphicMode {
+			fmt.Print("!Warning: to active the graphic mode, the size of the map must not exceed 6x8\n\n")
+		}
 		// TUI
 		ch := make(chan warehouse.CycleState)
 
