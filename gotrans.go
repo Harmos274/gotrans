@@ -15,6 +15,7 @@ const HelpText = "Gotrans\n" +
 	"the program will have to optimise the distribution of packages to trucks using the forklifts.\n\n" +
 	"Commands:\n" +
 	"-h --help\tShow help\n" +
+	"-g\t\tDisplay graphical information\n" +
 	"<file>\t\tlaunch the program\n"
 
 func main() {
@@ -25,6 +26,9 @@ func main() {
 		os.Exit(1)
 	} else if arguments[1] == "-h" || arguments[1] == "--help" {
 		fmt.Printf("%s\n", HelpText)
+		return
+	} else if len(arguments) > 2 && (arguments[2] == "-g" || arguments[2] == "--graphic") {
+		runGraphic(arguments[1])
 		return
 	}
 
