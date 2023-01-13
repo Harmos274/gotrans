@@ -1,7 +1,10 @@
 // Package warehouse Contains the warehouse data structure and related utilities
 package warehouse
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
 const (
 	nONE = iota
@@ -42,7 +45,7 @@ func refreshPaths(wh Warehouse, currentPaths []Path) []Path {
 		if path.isValid() {
 			currentPaths, replaced = insertPath(path, currentPaths)
 		} else {
-			fmt.Println("Could not find path for", pos, "returned", path)
+			_, _ = fmt.Fprintf(os.Stderr, "Could not find path for %v, returned %v", pos, path)
 		}
 
 		if replaced {
