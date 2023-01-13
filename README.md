@@ -56,7 +56,7 @@ directory, and its internal package `warehouse`.
 The role of the `gotrans` package is to manage the communication with the user it contains the entry point
 of the program in the `gotrans.go` file.
 
-There's also the `parse_input_file.go` file, whose role is to help the parsing of the input file given by
+There's also the `parse_input_file.go` file, whose role is to handle the parsing of the input file given by
 the users inputs, the `show_warehouse.go` that contains everything needed to print the warehouse on the
 terminal and the `graphical.go` that contains the functions needed to run the graphical UI.
 
