@@ -137,7 +137,6 @@ func parseForkLift(words []string) (pj ForkLift, position Position, err error) {
 	}
 	position.X = x
 	position.Y = y
-	pj.State = "WAIT"
 	return
 }
 
@@ -156,6 +155,5 @@ func parseTruck(words []string) (truck Truck, position Position, err error) {
 	truck.CurrentWeight = Weight(0)
 	position.X = x
 	position.Y = y
-	truck.State = "WAITING"
 	return
 }

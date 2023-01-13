@@ -8,6 +8,7 @@ type Event interface {
 	AtPosition() Position
 }
 
+// PickupPackage pickup package event
 type PickupPackage struct {
 	position    Position
 	emitterName string
@@ -26,6 +27,7 @@ func (pickPack PickupPackage) PackageName() string {
 	return pickPack.packName
 }
 
+// ForkliftWait forklift wait event
 type ForkliftWait struct {
 	forkliftName string
 	position     Position
@@ -39,6 +41,7 @@ func (fw ForkliftWait) AtPosition() Position {
 	return fw.position
 }
 
+// ForkliftMove forklift move event
 type ForkliftMove struct {
 	forkliftName  string
 	eventPosition Position
@@ -57,6 +60,7 @@ func (f ForkliftMove) ToPosition() Position {
 	return f.target
 }
 
+// DeliverPackage deliver package event
 type DeliverPackage struct {
 	position    Position
 	emitterName string
@@ -75,6 +79,7 @@ func (d DeliverPackage) PackageName() string {
 	return d.packName
 }
 
+// TruckWait truck wait event
 type TruckWait struct {
 	truckName         string
 	truckMaxWeight    Weight
@@ -98,6 +103,7 @@ func (t TruckWait) MaxWeight() Weight {
 	return t.truckMaxWeight
 }
 
+// TruckGone truck gone event
 type TruckGone struct {
 	truckName          string
 	truckMaxWeight     Weight

@@ -8,9 +8,9 @@ import (
 	"github.com/Harmos274/gotrans/warehouse"
 )
 
-type ShowableWarehouse warehouse.CycleState
+type showableWarehouse warehouse.CycleState
 
-func (sw ShowableWarehouse) WarehouseMap() string {
+func (sw showableWarehouse) warehouseMap() string {
 	wr := sw.Warehouse
 	w := strings.Repeat("#", wr.Length*2+2)
 	for y := 0; y < wr.Height; y++ {
@@ -33,7 +33,7 @@ func (sw ShowableWarehouse) WarehouseMap() string {
 	return w
 }
 
-func (sw ShowableWarehouse) Output() string {
+func (sw showableWarehouse) output() string {
 	var output string
 	for _, e := range sw.Events {
 		switch e := e.(type) {
@@ -56,6 +56,6 @@ func (sw ShowableWarehouse) Output() string {
 	return output
 }
 
-func (sw ShowableWarehouse) String() string {
-	return sw.Output() + sw.WarehouseMap()
+func (sw showableWarehouse) String() string {
+	return sw.output() + sw.warehouseMap()
 }

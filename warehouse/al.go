@@ -170,10 +170,10 @@ func getNewPos(pos Position, direction int, sizeX int, sizeY int) (Position, boo
 
 func getNearestEntityPos(pos Position, entitiesPos positionSet) Position {
 	nearest := entitiesPos.randomElem()
-	nearestDistance := euclidianDistance(pos, nearest)
+	nearestDistance := euclideanDistance(pos, nearest)
 
 	for entityPos := range entitiesPos {
-		currentDistance := euclidianDistance(pos, entityPos)
+		currentDistance := euclideanDistance(pos, entityPos)
 
 		if currentDistance < nearestDistance {
 			nearest = entityPos
@@ -184,7 +184,7 @@ func getNearestEntityPos(pos Position, entitiesPos positionSet) Position {
 	return nearest
 }
 
-func euclidianDistance(lhs Position, rhs Position) int {
+func euclideanDistance(lhs Position, rhs Position) int {
 	return abs(lhs.X-rhs.X) + abs(lhs.Y-rhs.Y)
 }
 

@@ -51,7 +51,7 @@ func main() {
 	currentCycle := 1
 	for state := range ch {
 		fmt.Printf("tour %d/%d\n", currentCycle, cycles)
-		fmt.Println(ShowableWarehouse(state))
+		fmt.Println(showableWarehouse(state))
 		currentCycle++
 	}
 
