@@ -71,7 +71,7 @@ For each `forklift`, the algorithm finds the quickest path to go to every `packa
 if the `forklift` finds a shorter path than another, its path is chosen, otherwise the `package` is
 removed from the `forklift`'s targets and another `package` is selected.
 
-Once the `forklift` arrives by the `package` it picks it up and search the quickest path to the `truck`.
+Once the `forklift` arrives by the `package` it picks it up and searches the quickest path to the `truck`.
 When the `forklift` arrives by the `truck` it loads its `package` in the `truck`, if possible, otherwise it waits.
 
-Once the `package` has been delivered the `forklift` go to another targets if there's one.
+Once the `package` has been delivered the `forklift` goes to another targets if there is one.
