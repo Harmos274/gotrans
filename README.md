@@ -12,6 +12,9 @@ around the map.
 
 ## Build
 
+In order to build the project, you must have [gcc](https://gcc.gnu.org) and [OpenGL](https://www.opengl.org) libraries
+installed on your device.
+
 You can build the project with `go build`.
 
 ## Test
@@ -38,6 +41,7 @@ It is formatted as follows:
 **Z next lines**: Truck name, X and Y position, max weight and cycle and cooldown after loading.
 
 Example:
+
 ```
 5 5 1000 -- Warehouse length, height and the number of execution cycles. 
 colis_a_livrer 2 1 green -- Package name, X and Y position and color.
@@ -48,6 +52,21 @@ transpalette_1 0 0 -- Forklift name and X and Y position.
 camion_b 3 4 4000 5 -- Truck name, X and Y position, max weight and cycle and cooldown after loading.
 ```
 
-## Design
+## Repository design
+
+The sources are organised through 2 packages, the main package, `gotrans`, located at the root of the
+directory, and its internal package `warehouse`.
+
+The role of the `gotrans` package is to manage the communication with the user it contains the entry point
+of the program in the `gotrans.go` file.
+
+There's also the `parse_input_file.go` file, whose role is to help the parsing of the input file given by
+the users inputs, the `show_warehouse.go` that contains everything needed to print the warehouse on the
+terminal and the `graphical.go` that contains the functions needed to run the graphical UI.
+
+In the `warehouse` package, the `warehouse.go` file contains the description of the Warehouse and the
+functions to modify its data. The `event.go` file describes all the events occurring during the warehouse
+cleaning execution cycles. Finally, the `al.go` file contains the pathfinding algorithm used in the cleaning
+warehouse process.
 
 ## Pathfinding strategy
