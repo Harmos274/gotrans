@@ -56,6 +56,7 @@ type Truck struct {
 	MaxWeight             Weight
 	CurrentWeight         Weight
 	ElapseDischargingTime int
+	TimeUntilReturn       int
 }
 
 func (ettMap EntityMap[T]) Exists(pos Position) bool {
@@ -80,6 +81,7 @@ func CleanWarehouse(wh Warehouse, ch chan CycleState, cycles uint) {
 func applyPaths(wh Warehouse, paths []Path) ([]Path, []Event) {
 	events := []Event{}
 	waitingForklifts := mapToPositionSet(wh.ForkLifts)
+	fullTrucks := make(map[Position]struct{})
 
 	for index := 0; index < len(paths); {
 		path := paths[index]
@@ -90,9 +92,11 @@ func applyPaths(wh Warehouse, paths []Path) ([]Path, []Event) {
 
 			if len(path.steps) == 0 {
 				if wh.Trucks.Exists(path.destination) {
-					paths, index, events = dropPackage(path, forklift, index, wh.ForkLifts, wh.Trucks, paths, events)
+					paths, index, events = dropPackage(path, forklift, index, wh.ForkLifts,
+						wh.Trucks, paths, fullTrucks, events)
 				} else if wh.Packages.Exists(path.destination) {
-					paths, events = takePackage(path, forklift, index, wh.ForkLifts, wh.Packages, paths, events)
+					paths, events = takePackage(path, forklift, index, wh.ForkLifts, wh.Packages,
+						paths, events)
 				}
 			} else {
 				paths, events = moveForkLift(path, forklift, index, wh.ForkLifts, paths, events)
@@ -109,9 +113,7 @@ func applyPaths(wh Warehouse, paths []Path) ([]Path, []Event) {
 		events = append(events, ForkliftWait{forkliftName: waiting.Name, position: pos})
 	}
 
-	for pos, truck := range wh.Trucks {
-		events = append(events, TruckWait{truckName: truck.Name, truckMaxWeight: truck.MaxWeight, truckLoadedWeight: truck.CurrentWeight, position: pos})
-	}
+	events = processTrucks(wh, fullTrucks, events)
 
 	return paths, events
 }
@@ -120,7 +122,10 @@ func moveForkLift(path Path, forklift ForkLift, index int, forkLifts EntityMap[F
 	paths []Path, events []Event,
 ) ([]Path, []Event) {
 	if !forkLifts.Exists(path.steps[0]) {
-		events = append(events, ForkliftMove{forkliftName: forklift.Name, eventPosition: path.current, target: path.steps[0]})
+		events = append(events, ForkliftMove{
+			forkliftName:  forklift.Name,
+			eventPosition: path.current, target: path.steps[0],
+		})
 
 		delete(forkLifts, path.current)
 		forkLifts[path.steps[0]] = forklift
@@ -140,7 +145,10 @@ func moveForkLift(path Path, forklift ForkLift, index int, forkLifts EntityMap[F
 func takePackage(path Path, forklift ForkLift, index int, forkLifts EntityMap[ForkLift],
 	packages EntityMap[Package], paths []Path, events []Event,
 ) ([]Path, []Event) {
-	events = append(events, PickupPackage{position: path.current, emitterName: forklift.Name, packName: packages[path.destination].Name})
+	events = append(events, PickupPackage{
+		position: path.current, emitterName: forklift.Name,
+		packName: packages[path.destination].Name,
+	})
 
 	// Take package from map
 	pack := packages[path.destination]
@@ -155,12 +163,15 @@ func takePackage(path Path, forklift ForkLift, index int, forkLifts EntityMap[Fo
 }
 
 func dropPackage(path Path, forklift ForkLift, index int, forkLifts EntityMap[ForkLift],
-	trucks EntityMap[Truck], paths []Path, events []Event,
+	trucks EntityMap[Truck], paths []Path, fulltrucks positionSet, events []Event,
 ) ([]Path, int, []Event) {
 	truck := trucks[path.destination]
 
-	if truck.CurrentWeight+forklift.pack.Weight <= truck.MaxWeight {
-		events = append(events, DeliverPackage{position: path.current, emitterName: forklift.Name, packName: forklift.pack.Name})
+	if truck.CurrentWeight+forklift.pack.Weight <= truck.MaxWeight && truck.TimeUntilReturn == 0 {
+		events = append(events, DeliverPackage{
+			position: path.current, emitterName: forklift.Name,
+			packName: forklift.pack.Name,
+		})
 
 		truck.CurrentWeight += forklift.pack.Weight
 		forklift.pack = nil
@@ -171,11 +182,54 @@ func dropPackage(path Path, forklift ForkLift, index int, forkLifts EntityMap[Fo
 		paths = paths[:len(paths)-1]
 	} else {
 		events = append(events, ForkliftWait{forkliftName: forklift.Name, position: path.current})
+		fulltrucks[path.destination] = struct{}{}
 
 		index++
 	}
 
 	return paths, index, events
+}
+
+func processTrucks(wh Warehouse, fullTrucks positionSet, events []Event) []Event {
+	for pos, truck := range wh.Trucks {
+		if truck.TimeUntilReturn == 0 && truck.MaxWeight <= truck.CurrentWeight {
+			fullTrucks[pos] = struct{}{}
+		}
+	}
+
+	for pos := range fullTrucks {
+		truck := wh.Trucks[pos]
+
+		if truck.TimeUntilReturn == 0 {
+			truck.TimeUntilReturn = truck.ElapseDischargingTime + 1
+			wh.Trucks[pos] = truck
+		}
+	}
+
+	for pos, truck := range wh.Trucks {
+		if truck.TimeUntilReturn == 0 {
+			events = append(events, TruckWait{
+				truckName:      truck.Name,
+				truckMaxWeight: truck.MaxWeight, truckLoadedWeight: truck.CurrentWeight,
+				position: pos,
+			})
+		} else {
+			truck.TimeUntilReturn--
+			if truck.TimeUntilReturn == 0 {
+				truck.CurrentWeight = 0
+			}
+
+			wh.Trucks[pos] = truck
+
+			events = append(events, TruckGone{
+				truckName:      truck.Name,
+				truckMaxWeight: truck.MaxWeight, truckChargedWeight: truck.CurrentWeight,
+				position: pos,
+			})
+		}
+	}
+
+	return events
 }
 
 func copyMap[T Package | ForkLift | Truck](toClone map[Position]T) map[Position]T {
