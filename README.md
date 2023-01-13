@@ -17,10 +17,6 @@ installed on your device.
 
 You can build the project with `go build`.
 
-## Test
-
-Run tests with `go test`.
-
 ## Run
 
 You can run the project after build with the `gotrans` executable.
@@ -70,3 +66,4 @@ cleaning execution cycles. Finally, the `al.go` file contains the pathfinding al
 warehouse process.
 
 ## Pathfinding strategy
+
