@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/Harmos274/gotrans/warehouse"
@@ -34,7 +35,22 @@ func (sw ShowableWarehouse) WarehouseMap() string {
 func (sw ShowableWarehouse) Output() string {
 	var output string
 	for _, e := range sw.Events {
-		fmt.Println(e)
+		switch e := e.(type) {
+		case warehouse.PickupPackage:
+			output += fmt.Sprintf("%s is is taking the package %s at position [%d,%d]\n", e.EmitterName(), e.PackageName(), e.AtPosition().X, e.AtPosition().Y)
+		case warehouse.ForkliftWait:
+			output += fmt.Sprintf("%s is waiting at position [%d,%d]\n", e.EmitterName(), e.AtPosition().X, e.AtPosition().Y)
+		case warehouse.ForkliftMove:
+			output += fmt.Sprintf("%s move from [%d,%d] to [%d,%d]\n", e.EmitterName(), e.AtPosition().X, e.AtPosition().Y, e.ToPosition().X, e.ToPosition().Y)
+		case warehouse.DeliverPackage:
+			output += fmt.Sprintf("%s is delivering the package %s\n", e.EmitterName(), e.PackageName())
+		case warehouse.TruckWait:
+			output += fmt.Sprintf("%s is waiting. %d/%d\n", e.EmitterName(), e.ChargedWeight(), e.MaxWeight())
+		case warehouse.TruckGone:
+			output += fmt.Sprintf("%s is gone. %d/%d\n", e.EmitterName(), e.ChargedWeight(), e.MaxWeight())
+		default:
+			log.Fatal("Invalid type of warehouse event.")
+		}
 	}
 	return output
 }
