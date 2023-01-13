@@ -1,134 +1,193 @@
+// Package warehouse Contains the warehouse data structure and related utilities
 package warehouse
 
 import "fmt"
 
 const (
-	UP = 1 << iota
-	RIGHT
-	DOWN
-	LEFT
-	ALL = UP | RIGHT | DOWN | LEFT
+	nONE = iota
+	uP
+	rIGHT
+	dOWN
+	lEFT
 )
 
-func refreshPaths(wh Warehouse, current_paths []Path) []Path {
-	targeted_packages := countTargetedPackages(wh, current_paths)
-	idle := getIdleForklifts(wh.ForkLifts, current_paths, true)
+type direction = int
+
+func refreshPaths(wh Warehouse, currentPaths []Path) []Path {
+	targetedPackages := countTargetedPackages(wh, currentPaths)
+	idle := getIdleForklifts(wh.ForkLifts, currentPaths, true)
+	trucks := mapToPositionSet(wh.Trucks)
+	truckValidator := func([]attemptPosition, Position) bool { return true }
 
 	for pos := range idle {
-		path := pathToObject(wh, pos, current_paths, shouldGoToTruck)
+		path := pathToObject(wh, pos, trucks, currentPaths, truckValidator)
 
 		if path.isValid() {
-			current_paths = append(current_paths, path)
+			currentPaths = append(currentPaths, path)
 		}
 	}
 
-	idle = getIdleForklifts(wh.ForkLifts, current_paths, false)
+	idle = getIdleForklifts(wh.ForkLifts, currentPaths, false)
+	packages := mapToPositionSet(wh.Packages)
 
-	for len(idle) > 0 && targeted_packages < len(wh.Packages) {
+	for len(idle) > 0 && targetedPackages < len(wh.Packages) {
 		pos := idle.randomElem()
+		packageValidator := func(path []attemptPosition, pos Position) bool {
+			return shouldGoToPackage(wh, path, pos, currentPaths)
+		}
 
-		path := pathToObject(wh, pos, current_paths, shouldGoToPackage)
+		path := pathToObject(wh, pos, packages, currentPaths, packageValidator)
 		replaced := false
 
 		if path.isValid() {
-			current_paths, replaced = insertPath(path, current_paths)
+			currentPaths, replaced = insertPath(path, currentPaths)
 		} else {
 			fmt.Println("Could not find path for", pos, "returned", path)
 		}
 
 		if replaced {
-			idle = getIdleForklifts(wh.ForkLifts, current_paths, false)
+			idle = getIdleForklifts(wh.ForkLifts, currentPaths, false)
 		} else {
 			delete(idle, pos)
 		}
 	}
 
-	return current_paths
+	return currentPaths
 }
 
-func pathToObject(wh Warehouse, start Position, other_paths []Path, validator validator) Path {
-	best_path := Path{current: start, destination: start}
-	current_path := []AttemptPosition{{Position: start, directions: ALL}}
-	pos_set := make(map[Position]struct{})
+func pathToObject(wh Warehouse, start Position, targets positionSet, otherPaths []Path, validator validator) Path {
+	bestPath := Path{current: start, destination: start}
+	nearestTarget := getNearestEntityPos(start, targets)
+	currentPath := []attemptPosition{{
+		Position:   start,
+		directions: getDirectionsPriority(start, nearestTarget, nONE), nextDirection: 0,
+	}}
+	posSet := make(map[Position]struct{})
 
-	for len(current_path) > 0 {
-		current_step := &current_path[len(current_path)-1]
-		next_move := nextDirection(current_step.directions)
+	for len(currentPath) > 0 {
+		currentStep := &currentPath[len(currentPath)-1]
 
-		if next_move != 0 && shouldKeepSearching(current_path, best_path) {
-			current_step.directions ^= next_move
-			move(wh, current_step.Position, next_move, &current_path, pos_set, &best_path,
-				other_paths, validator)
+		for currentStep.nextDirection < 4 &&
+			currentStep.directions[currentStep.nextDirection] == nONE {
+			currentStep.nextDirection++
+		}
+
+		if currentStep.nextDirection < 4 && shouldKeepSearching(currentPath, bestPath) {
+			nextMove := currentStep.directions[currentStep.nextDirection]
+			move(wh, currentStep.Position, nextMove, &currentPath, posSet, &bestPath,
+				otherPaths, validator, targets)
+			currentStep.nextDirection++
 		} else {
-			current_path = current_path[:len(current_path)-1]
-			delete(pos_set, current_step.Position)
+			currentPath = currentPath[:len(currentPath)-1]
+			delete(posSet, currentStep.Position)
 		}
 	}
 
-	return best_path
+	return bestPath
 }
 
-func move(wh Warehouse, current_pos Position, direction int, path *[]AttemptPosition,
-	pos_set positionSet, current_best *Path, other_paths []Path, validator validator) {
-	new_pos, possible := getNewPos(current_pos, direction, wh.Length, wh.Height)
+func move(wh Warehouse, currentPos Position, direction int, path *[]attemptPosition,
+	posSet positionSet, currentBest *Path, otherPaths []Path, validator validator, targets positionSet,
+) {
+	newPos, possible := getNewPos(currentPos, direction, wh.Length, wh.Height)
 
-	if !possible || alreadyVisited(pos_set, new_pos) ||
-		isSomeoneOnThisTile(new_pos, other_paths, len(*path)-1) {
+	if !possible || alreadyVisited(posSet, newPos) ||
+		isSomeoneOnThisTile(newPos, otherPaths, len(*path)-1) {
 		return
 	}
 
-	if wh.SomethingExistsAt(new_pos) {
-		if validator(wh, *path, new_pos, other_paths) {
-			*current_best = attemptToPath(*path, new_pos)
-		} else {
-			return
+	if targets.has(newPos) {
+		if validator(*path, newPos) {
+			*currentBest = attemptToPath(*path, newPos)
 		}
+		delete(targets, newPos)
+	} else if wh.SomethingExistsAt(newPos) {
+		return
 	} else {
-		*path = append(*path, AttemptPosition{
-			directions: ALL ^ inverseDirection(direction),
-			Position:   new_pos,
+		*path = append(*path, attemptPosition{
+			directions: getDirectionsPriority(newPos, getNearestEntityPos(newPos, targets), inverseDirection(direction)),
+			Position:   newPos,
 		})
-		pos_set[new_pos] = struct{}{}
+		posSet[newPos] = struct{}{}
 	}
 }
 
-func nextDirection(directions int) int {
-	if directions&UP != 0 {
-		return UP
-	} else if directions&RIGHT != 0 {
-		return RIGHT
-	} else if directions&DOWN != 0 {
-		return DOWN
-	} else if directions&LEFT != 0 {
-		return LEFT
-	} else {
-		return 0
+func getDirectionsPriority(current Position, target Position,
+	comingFrom direction,
+) [4]direction {
+	distanceX := target.X - current.X
+	distanceY := target.Y - current.Y
+	priorityX := [2]direction{rIGHT, lEFT}
+	priorityY := [2]direction{dOWN, uP}
+
+	switch comingFrom {
+	case rIGHT:
+		priorityX[0] = nONE
+	case lEFT:
+		priorityX[1] = nONE
+	case dOWN:
+		priorityY[0] = nONE
+	case uP:
+		priorityY[1] = nONE
 	}
+
+	if distanceX < 0 {
+		priorityX = [2]direction{priorityX[1], priorityX[0]}
+	}
+	if distanceY < 0 {
+		priorityY = [2]direction{priorityY[1], priorityY[0]}
+	}
+
+	positions := [4]direction{priorityX[0], priorityY[0], priorityX[1], priorityY[1]}
+
+	if abs(distanceY) > abs(distanceX) {
+		positions = [4]direction{priorityY[0], priorityX[0], priorityY[1], priorityX[1]}
+	}
+
+	return positions
 }
 
-func getNewPos(pos Position, direction int, size_x int, size_y int) (Position, bool) {
-	if (direction == UP && pos.Y == 0) || (direction == DOWN && pos.Y == size_y-1) ||
-		(direction == LEFT && pos.X == 0) || (direction == RIGHT && pos.X == size_x-1) {
-		return Position{}, false
+func getNewPos(pos Position, direction int, sizeX int, sizeY int) (Position, bool) {
+	switch direction {
+	case uP:
+		pos.Y--
+	case dOWN:
+		pos.Y++
+	case lEFT:
+		pos.X--
+	case rIGHT:
+		pos.X++
 	}
 
-	if direction == UP {
-		pos.Y -= 1
-	} else if direction == DOWN {
-		pos.Y += 1
-	} else if direction == LEFT {
-		pos.X -= 1
-	} else if direction == RIGHT {
-		pos.X += 1
-	}
+	valid := pos.X >= 0 && pos.X < sizeX && pos.Y >= 0 && pos.Y < sizeY
 
-	return pos, true
+	return pos, valid
 }
 
-func attemptToPath(attempt []AttemptPosition, destination Position) Path {
+func getNearestEntityPos(pos Position, entitiesPos positionSet) Position {
+	nearest := entitiesPos.randomElem()
+	nearestDistance := euclidianDistance(pos, nearest)
+
+	for entityPos := range entitiesPos {
+		currentDistance := euclidianDistance(pos, entityPos)
+
+		if currentDistance < nearestDistance {
+			nearest = entityPos
+			nearestDistance = currentDistance
+		}
+	}
+
+	return nearest
+}
+
+func euclidianDistance(lhs Position, rhs Position) int {
+	return abs(lhs.X-rhs.X) + abs(lhs.Y-rhs.Y)
+}
+
+func attemptToPath(attempt []attemptPosition, destination Position) Path {
 	path := Path{current: attempt[0].Position, destination: destination}
 
-	for pos := 1; pos < len(attempt); pos += 1 {
+	for pos := 1; pos < len(attempt); pos++ {
 		path.steps = append(path.steps, attempt[pos].Position)
 	}
 
@@ -136,35 +195,32 @@ func attemptToPath(attempt []AttemptPosition, destination Position) Path {
 }
 
 func inverseDirection(direction int) int {
-	if direction == UP {
-		return DOWN
-	} else if direction == DOWN {
-		return UP
-	} else if direction == LEFT {
-		return RIGHT
-	} else if direction == RIGHT {
-		return LEFT
-	} else {
+	switch direction {
+	case uP:
+		return dOWN
+	case dOWN:
+		return uP
+	case lEFT:
+		return rIGHT
+	case rIGHT:
+		return lEFT
+	default:
 		return 0
 	}
 }
 
-func shouldGoToTruck(wh Warehouse, _ []AttemptPosition, pos Position, _ []Path) bool {
-	return wh.Trucks.Exists(pos)
-}
-
-func shouldGoToPackage(wh Warehouse, attempt []AttemptPosition, pos Position, other_paths []Path) bool {
+func shouldGoToPackage(wh Warehouse, attempt []attemptPosition, pos Position, otherPaths []Path) bool {
 	if !wh.Packages.Exists(pos) {
 		return false
 	}
 
-	existing := getExistingPathTo(pos, other_paths)
+	existing := getExistingPathTo(pos, otherPaths)
 
-	return !existing.isValid() || len(attempt) < len(existing.steps)+1
+	return !existing.isValid() || len(attempt) <= len(existing.steps)
 }
 
-func shouldKeepSearching(attempt []AttemptPosition, current_best Path) bool {
-	return (!current_best.isValid() || len(attempt) < len(current_best.steps)+1)
+func shouldKeepSearching(attempt []attemptPosition, currentBest Path) bool {
+	return (!currentBest.isValid() || len(attempt) <= len(currentBest.steps))
 }
 
 type Path struct {
@@ -173,21 +229,28 @@ type Path struct {
 	steps       []Position
 }
 
-type AttemptPosition struct {
+type attemptPosition struct {
 	Position
-	directions int
+	directions    [4]direction
+	nextDirection int
 }
 
 type positionSet map[Position]struct{}
 
-type validator = func(Warehouse, []AttemptPosition, Position, []Path) bool
+type validator = func([]attemptPosition, Position) bool
 
-func (self positionSet) randomElem() Position {
-	for pos := range self {
+func (set positionSet) randomElem() Position {
+	for pos := range set {
 		return pos
 	}
 
 	return Position{}
+}
+
+func (set positionSet) has(pos Position) bool {
+	_, ok := set[pos]
+
+	return ok
 }
 
 func alreadyVisited(set positionSet, pos Position) bool {
@@ -199,20 +262,6 @@ func alreadyVisited(set positionSet, pos Position) bool {
 func isSomeoneOnThisTile(pos Position, paths []Path, turn int) bool {
 	for _, path := range paths {
 		if len(path.steps) > turn && path.steps[turn] == pos {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (self Path) contains(pos Position) bool {
-	if self.current == pos || self.destination == pos {
-		return true
-	}
-
-	for _, step := range self.steps {
-		if pos == step {
 			return true
 		}
 	}
@@ -246,7 +295,7 @@ func countTargetedPackages(wh Warehouse, paths []Path) int {
 
 	for _, path := range paths {
 		if wh.Packages.Exists(path.destination) {
-			packages += 1
+			packages++
 		}
 	}
 
@@ -254,22 +303,38 @@ func countTargetedPackages(wh Warehouse, paths []Path) int {
 }
 
 func getIdleForklifts(forklifs EntityMap[ForkLift], paths []Path, loaded bool) positionSet {
-	idle_set := make(map[Position]struct{})
+	idleSet := make(map[Position]struct{})
 
 	for pos, forklift := range forklifs {
-
 		if (forklift.pack != nil) == loaded {
-			idle_set[pos] = struct{}{}
+			idleSet[pos] = struct{}{}
 		}
 	}
 
 	for _, path := range paths {
-		delete(idle_set, path.current)
+		delete(idleSet, path.current)
 	}
 
-	return idle_set
+	return idleSet
 }
 
-func (self Path) isValid() bool {
-	return self.current != self.destination
+func mapToPositionSet[T Package | Truck | ForkLift](entities EntityMap[T]) positionSet {
+	set := make(map[Position]struct{}, len(entities))
+
+	for pos := range entities {
+		set[pos] = struct{}{}
+	}
+
+	return set
+}
+
+func (path Path) isValid() bool {
+	return path.current != path.destination
+}
+
+func abs(value int) int {
+	if value >= 0 {
+		return value
+	}
+	return -value
 }

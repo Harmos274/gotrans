@@ -62,7 +62,7 @@ func CleanWarehouse(wh Warehouse, ch chan Warehouse, cycles uint) {
 	defer close(ch)
 	paths := refreshPaths(wh, make([]Path, 0))
 
-	for ; cycles != 0 && !isOver(wh); cycles -= 1 {
+	for ; cycles != 0 && !isOver(wh); cycles-- {
 		paths = applyPaths(wh, paths)
 
 		ch <- wh.Clone()
@@ -86,7 +86,7 @@ func applyPaths(wh Warehouse, paths []Path) []Path {
 				}
 			} else {
 				paths = moveForkLift(path, forklift, index, wh.ForkLifts, paths)
-				index += 1
+				index++
 			}
 		} else {
 			fmt.Println("Invalid path was kept")
@@ -97,18 +97,25 @@ func applyPaths(wh Warehouse, paths []Path) []Path {
 }
 
 func moveForkLift(path Path, forklift ForkLift, index int, forkLifts EntityMap[ForkLift],
-	paths []Path) []Path {
-	delete(forkLifts, path.current)
-	forkLifts[path.steps[0]] = forklift
+	paths []Path,
+) []Path {
+	if !forkLifts.Exists(path.steps[0]) {
+		delete(forkLifts, path.current)
+		forkLifts[path.steps[0]] = forklift
 
-	paths[index].current = path.steps[0]
-	paths[index].steps = path.steps[1:]
+		paths[index].current = path.steps[0]
+		paths[index].steps = path.steps[1:]
+	} else {
+		paths[index] = paths[len(paths)-1]
+		paths = paths[:len(paths)-1]
+	}
 
 	return paths
 }
 
 func takePackage(path Path, forklift ForkLift, index int, forkLifts EntityMap[ForkLift],
-	packages EntityMap[Package], paths []Path) []Path {
+	packages EntityMap[Package], paths []Path,
+) []Path {
 	// Take package from map
 	pack := packages[path.destination]
 	delete(packages, path.destination)
@@ -122,7 +129,8 @@ func takePackage(path Path, forklift ForkLift, index int, forkLifts EntityMap[Fo
 }
 
 func dropPackage(path Path, forklift ForkLift, index int, forkLifts EntityMap[ForkLift],
-	trucks EntityMap[Truck], paths []Path) ([]Path, int) {
+	trucks EntityMap[Truck], paths []Path,
+) ([]Path, int) {
 	truck := trucks[path.destination]
 
 	if truck.CurrentWeight+forklift.pack.Weight <= truck.MaxWeight {
@@ -134,7 +142,7 @@ func dropPackage(path Path, forklift ForkLift, index int, forkLifts EntityMap[Fo
 		paths[index] = paths[len(paths)-1]
 		paths = paths[:len(paths)-1]
 	} else {
-		index += 1
+		index++
 	}
 
 	return paths, index
