@@ -17,13 +17,14 @@ func (sw ShowableWarehouse) WarehouseMap() string {
 		w += "#\n# "
 		for x := 0; x < wr.Length; x++ {
 			pos := warehouse.Position{X: x, Y: y}
-			if wr.Packages.Exists(pos) {
+			switch {
+			case wr.Packages.Exists(pos):
 				w += "📦"
-			} else if wr.ForkLifts.Exists(pos) {
+			case wr.ForkLifts.Exists(pos):
 				w += "👷"
-			} else if wr.Trucks.Exists(pos) {
+			case wr.Trucks.Exists(pos):
 				w += "🚚"
-			} else {
+			default:
 				w += "  "
 			}
 		}

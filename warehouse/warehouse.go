@@ -198,21 +198,12 @@ func processTrucks(wh Warehouse, fullTrucks positionSet, events []Event) []Event
 	}
 
 	for pos := range fullTrucks {
-		truck := wh.Trucks[pos]
-
-		if truck.TimeUntilReturn == 0 {
-			truck.TimeUntilReturn = truck.ElapseDischargingTime + 1
-			wh.Trucks[pos] = truck
-		}
+		sendTruck(pos, wh.Trucks)
 	}
 
 	for pos, truck := range wh.Trucks {
 		if truck.TimeUntilReturn == 0 {
-			events = append(events, TruckWait{
-				truckName:      truck.Name,
-				truckMaxWeight: truck.MaxWeight, truckLoadedWeight: truck.CurrentWeight,
-				position: pos,
-			})
+			events = append(events, createTruckWait(truck, pos))
 		} else {
 			truck.TimeUntilReturn--
 			if truck.TimeUntilReturn == 0 {
@@ -221,15 +212,38 @@ func processTrucks(wh Warehouse, fullTrucks positionSet, events []Event) []Event
 
 			wh.Trucks[pos] = truck
 
-			events = append(events, TruckGone{
-				truckName:      truck.Name,
-				truckMaxWeight: truck.MaxWeight, truckChargedWeight: truck.CurrentWeight,
-				position: pos,
-			})
+			if truck.TimeUntilReturn == truck.ElapseDischargingTime+1 || truck.TimeUntilReturn == 0 {
+				events = append(events, createTruckWait(truck, pos))
+			} else {
+				events = append(events, createTruckGone(truck, pos))
+			}
 		}
 	}
 
 	return events
+}
+
+func sendTruck(pos Position, trucks EntityMap[Truck]) {
+	truck := trucks[pos]
+
+	if truck.TimeUntilReturn == 0 {
+		truck.TimeUntilReturn = truck.ElapseDischargingTime + 1
+		trucks[pos] = truck
+	}
+}
+
+func createTruckWait(truck Truck, pos Position) TruckWait {
+	return TruckWait{
+		truckName: truck.Name, truckMaxWeight: truck.MaxWeight,
+		truckLoadedWeight: truck.CurrentWeight, position: pos,
+	}
+}
+
+func createTruckGone(truck Truck, pos Position) TruckGone {
+	return TruckGone{
+		truckName: truck.Name, truckMaxWeight: truck.MaxWeight,
+		truckChargedWeight: truck.CurrentWeight, position: pos,
+	}
 }
 
 func copyMap[T Package | ForkLift | Truck](toClone map[Position]T) map[Position]T {
